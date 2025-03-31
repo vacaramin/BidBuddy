@@ -1,0 +1,22 @@
+{
+  "name": "test",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^0.485.0",
+    "preact": "^10.26.2",
+    "preact-router": "^4.1.2",
+    "sass": "^1.86.0",
+    "styled-components": "^6.1.16"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.1",
+    "vite": "^6.2.0"
+  }
+}
