@@ -10,7 +10,7 @@ import {
 } from "lucide-preact";
 import Logo from "../components/Logo";
 import { Link } from "preact-router";
-import ApiKeyDropdown from "../components/ApiKeyDropdown";
+import Topbar from "./Topbar";
 
 const Sidebar = ({ className, children }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,7 +47,7 @@ const Sidebar = ({ className, children }) => {
       </aside>
       <div className="rightSection">
         <section className="topSection">
-          <ApiKeyDropdown></ApiKeyDropdown>
+          <Topbar></Topbar>
         </section>
         <main className="content">{children}</main>
       </div>
