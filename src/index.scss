@@ -1,3 +1,8 @@
+@font-face {
+  font-family: 'sfpro';
+  src: url(./assets/SFPRODISPLAYREGULAR.OTF);
+}
+
 :root {
   line-height: 1.5;
   font-weight: 400;
@@ -8,10 +13,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  @font-face {
-    font-family: 'sfpro';
-    src: url(./assets/SFPRODISPLAYREGULAR.OTF);
-  }
   font-family: 'sfpro';
 }
 
