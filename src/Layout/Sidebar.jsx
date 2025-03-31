@@ -7,7 +7,7 @@ import {
   Menu,
   Notebook,
   Settings,
-} from "lucide-react";
+} from "lucide-preact";
 import Logo from "../components/Logo";
 import { Link } from "preact-router";
 

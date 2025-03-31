@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.485.0",
+    "lucide-preact": "^0.485.0",
     "preact": "^10.26.2",
     "preact-router": "^4.1.2",
     "sass": "^1.86.0",
@@ -20,7 +20,7 @@
     "vite": "^6.2.0"
   },
   "resolutions": {
-  "react": "preact-compat",
-  "react-dom": "preact-compat"
-}
+    "react": "preact-compat",
+    "react-dom": "preact-compat"
+  }
 }
