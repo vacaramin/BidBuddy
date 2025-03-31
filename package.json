@@ -18,5 +18,9 @@
   "devDependencies": {
     "@preact/preset-vite": "^2.10.1",
     "vite": "^6.2.0"
-  }
+  },
+  "resolutions": {
+  "react": "preact-compat",
+  "react-dom": "preact-compat"
+}
 }
