@@ -1,10 +1,5 @@
-
 const Bid = () => {
-  return (
-    <div>
-      Bid
-    </div>
-  )
-}
+  return <div>Bid</div>;
+};
 
-export default Bid
+export default Bid;

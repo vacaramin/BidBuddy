@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "prettier -w ."
   },
   "dependencies": {
+    "antd": "^5.24.5",
     "lucide-preact": "^0.485.0",
     "preact": "^10.26.2",
     "preact-router": "^4.1.2",
+    "prettier": "^3.5.3",
     "sass": "^1.86.0",
     "styled-components": "^6.1.16"
   },

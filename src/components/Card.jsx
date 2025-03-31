@@ -5,7 +5,6 @@ const Card = ({ className }) => {
 };
 
 export default styled(Card)`
-
   background-color: rgba(0, 0, 0, 0.3);
   min-height: 100px;
   padding: 5px;

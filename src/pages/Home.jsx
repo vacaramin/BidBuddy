@@ -6,10 +6,10 @@ const Home = ({ className }) => {
     <div className={className}>
       <h1>Home</h1>
       <section className="cards">
-      <Card/>
-      <Card/>
-      <Card/>
-        </section>
+        <Card />
+        <Card />
+        <Card />
+      </section>
     </div>
   );
 };
@@ -19,7 +19,5 @@ export default styled(Home)`
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 10px;
-
-   
   }
 `;
