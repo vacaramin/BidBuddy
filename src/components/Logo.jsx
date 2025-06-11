@@ -4,14 +4,14 @@ import logo from "/logo.svg";
 const Logo = ({ className }) => {
   return (
     <div className={className}>
-      <img
+      {/* <img
         src={logo}
         width={"50px"}
         height={"50px"}
         className="logo"
         alt="logo Instant Bid"
-      />
-      <h1> Instant Bid</h1>
+      /> */}
+      <h1> Freelance helper</h1>
     </div>
   );
 };

@@ -1,20 +1,23 @@
 const token = {
   token: {
-    colorPrimary: "#fff",
     borderRadius: 2,
-    colorBgContainer: "#14a800",
-    colorBgElevated: "#fff",
-    colorText: "#fff",
     lineWidth: "2px",
+    colorBgContainer: "transparent"
   },
   components: {
     Card: {
-      actionsBg: "blue",
-      colorText: "green",
+
     },
     Input: {
-      colorBorder: "#fff",
+      colorBorder: "transparent",
     },
+    Button: {
+      defaultActiveBg: "#323232",
+      defaultBg: "#232232"
+    },
+    Form:{
+      labelColor : "#fff"
+    }
   },
 };
 

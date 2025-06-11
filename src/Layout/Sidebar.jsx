@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useState } from "preact/hooks";
 import {
-  BookTemplate,
+  Bed,
   History,
   Home,
   Menu,
@@ -27,17 +27,17 @@ const Sidebar = ({ className, children }) => {
             <Link href="/" className="navItem">
               <Home /> Home
             </Link>
-            <Link href="/config" className="navItem">
+            <Link href="/proposal" className="navItem">
               <Notebook />
               Generate Proposal
-            </Link>
-            <Link href="/config" className="navItem">
-              <BookTemplate />
-              Templates
-            </Link>
+            </Link>{" "}
             <Link href="/config" className="navItem">
               <History />
               History
+            </Link>
+            <Link href="/config" className="navItem">
+              <Bed />
+              Sleep Cycle
             </Link>
             <Link href="/config" className="navItem">
               <Settings /> Settings
@@ -109,7 +109,6 @@ export default styled(Sidebar)`
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
-      border-radius: 8px;
       transition: background 0.3s;
       text-decoration: none;
       color: inherit;
@@ -120,7 +119,7 @@ export default styled(Sidebar)`
     }
 
     .navItem:hover {
-      background-color: #14a800;
+      background-color: rgba(255, 255, 255, 0.05);
     }
   }
 

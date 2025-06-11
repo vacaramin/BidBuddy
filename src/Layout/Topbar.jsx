@@ -83,7 +83,7 @@ export default styled(Topbar)`
     button {
       height: 100%;
       padding: 5px 10px;
-      background-color: #14a800;
+      background-color: #2e4a6c;
       border: none;
       border-radius: 2px;
       word-wrap: normal;
