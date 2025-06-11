@@ -20,7 +20,6 @@ const GenerateProposal = ({ className }) => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -50,14 +49,13 @@ const GenerateProposal = ({ className }) => {
     e.preventDefault();
     if (validateForm()) {
       console.log('Success:', formData);
-      // Handle form submission here
     }
   };
 
   return (
     <div className={className}>
       <div className="proposal-card">
-        <h1>AI Proposal Generator</h1>
+        <h1>Proposal Generator</h1>
         <div onSubmit={handleSubmit}>
           <h2>Project Information</h2>
           

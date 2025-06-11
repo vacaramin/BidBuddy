@@ -1,19 +1,21 @@
 import styled from "styled-components";
 import { useState } from "preact/hooks";
-import {
-  Bed,
-  History,
-  Home,
-  Menu,
-  Notebook,
-  Settings,
-} from "lucide-preact";
+import { Bed, History, Home, Menu, Notebook, Settings } from "lucide-preact";
 import Logo from "../components/Logo";
-import { Link } from "preact-router";
+import { Link, useRouter } from "preact-router";
 import Topbar from "./Topbar";
 
+const navItems = [
+  { name: "Home", icon: <Home />, path: "/" },
+  { name: "Generate Proposal", icon: <Notebook />, path: "/proposal" },
+  { name: "History", icon: <History />, path: "/history" },
+  { name: "Sleep Cycle", icon: <Bed />, path: "/sleep-cycle" },
+  { name: "Settings", icon: <Settings />, path: "/settings" },
+];
 const Sidebar = ({ className, children }) => {
   const [isOpen, setIsOpen] = useState(false);
+const [router] = useRouter();
+  const currentPath = router.url;
 
   return (
     <div className={className}>
@@ -24,24 +26,14 @@ const Sidebar = ({ className, children }) => {
         </div>
         <nav>
           <ul className="navMenu">
-            <Link href="/" className="navItem">
-              <Home /> Home
-            </Link>
-            <Link href="/proposal" className="navItem">
-              <Notebook />
-              Generate Proposal
-            </Link>{" "}
-            <Link href="/config" className="navItem">
-              <History />
-              History
-            </Link>
-            <Link href="/config" className="navItem">
-              <Bed />
-              Sleep Cycle
-            </Link>
-            <Link href="/config" className="navItem">
-              <Settings /> Settings
-            </Link>
+            {navItems.map(({ name, icon, path }) => (
+              <Link
+                href={path}
+                className={`navItem ${currentPath === path ? "active" : ""}`}
+              >
+                {icon} {name}
+              </Link>
+            ))}
           </ul>
         </nav>
       </aside>
@@ -120,6 +112,11 @@ export default styled(Sidebar)`
 
     .navItem:hover {
       background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .navItem.active {
+      color: #1890ff;
+      transition: color 0.3s;
     }
   }
 
