@@ -9,6 +9,7 @@ import GenerateProposal from "./pages/GenerateProposal.jsx";
 import History from "./pages/History.jsx";
 import SleepCycle from "./pages/SleepCycle.jsx";
 import Settings from "./pages/Settings.jsx";
+import OnboardingWizard from "./pages/OnboardingWizard.jsx";
 
 const Main = () => (
   <ConfigProvider theme={token}>
@@ -18,6 +19,7 @@ const Main = () => (
       <Sidebar path="/history" children={<History />} />
       <Sidebar path="/sleep-cycle" children={<SleepCycle />} />
       <Sidebar path="/proposal" children={<GenerateProposal />} />
+      <Sidebar path="/onboard" children={<OnboardingWizard />} />
       <Route path="*" component={<Home />}></Route>
       
     </Router>

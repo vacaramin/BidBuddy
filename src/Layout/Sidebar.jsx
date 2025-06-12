@@ -10,11 +10,15 @@ const navItems = [
   { name: "Generate Proposal", icon: <Notebook />, path: "/proposal" },
   { name: "History", icon: <History />, path: "/history" },
   { name: "Sleep Cycle", icon: <Bed />, path: "/sleep-cycle" },
-  { name: "Settings", icon: <Settings />, path: "/settings" },
+  {
+    name: "Settings",
+    icon: <Settings className="settings" />,
+    path: "/settings",
+  },
 ];
 const Sidebar = ({ className, children }) => {
   const [isOpen, setIsOpen] = useState(false);
-const [router] = useRouter();
+  const [router] = useRouter();
   const currentPath = router.url;
 
   return (
@@ -108,6 +112,19 @@ export default styled(Sidebar)`
       align-items: center;
       justify-content: flex-start;
       gap: 5px;
+
+      .settings {
+        animation: rotate 8s linear infinite;
+
+        @keyframes rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      }
     }
 
     .navItem:hover {
