@@ -11,7 +11,7 @@ const Logo = ({ className }) => {
         className="logo"
         alt="logo Instant Bid"
       /> */}
-      <h1> Freelance helper</h1>
+      <h1> Bid Buddy</h1>
     </div>
   );
 };

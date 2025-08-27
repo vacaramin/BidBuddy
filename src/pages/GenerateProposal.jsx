@@ -60,15 +60,10 @@ const GenerateProposal = ({ className }) => {
 
           <form onSubmit={handleSubmit} className="proposal-form">
             <div className="section">
-              <div className="section-header">
-                <span className="section-icon">📋</span>
-                <h2>Project Information</h2>
-              </div>
               
               <div className="form-group">
                 <label htmlFor="project_description">
                   Project Description *
-                  <span className="label-hint">paste the project posting here</span>
                 </label>
                 <div className="input-wrapper">
                   <textarea
@@ -88,7 +83,6 @@ const GenerateProposal = ({ className }) => {
                 <div className="form-group">
                   <label htmlFor="llm_model">
                     AI Model *
-                    <span className="label-hint">Choose your AI assistant</span>
                   </label>
                   <div className="input-wrapper">
                     <select
@@ -108,31 +102,6 @@ const GenerateProposal = ({ className }) => {
                     <div className="input-border"></div>
                   </div>
                   {errors.llm_model && <span className="error-message">{errors.llm_model}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="conversation_type">
-                    Proposal Type *
-                    <span className="label-hint">What style do you need?</span>
-                  </label>
-                  <div className="input-wrapper">
-                    <select
-                      id="conversation_type"
-                      value={formData.conversation_type}
-                      onChange={(e) => handleInputChange('conversation_type', e.target.value)}
-                      className={errors.conversation_type ? 'error' : ''}
-                    >
-                      <option value="">What kind of response do you need?</option>
-                      <option value="proper_proposal">📄 Formal Proposal</option>
-                      <option value="conversational">💬 Conversational Message</option>
-                      <option value="message_reply">⚡ Quick Reply</option>
-                      <option value="follow_up">🔄 Follow-up Message</option>
-                      <option value="cold_outreach">🎯 Cold Outreach</option>
-                      <option value="bid_response">🏆 Competitive Bid</option>
-                    </select>
-                    <div className="input-border"></div>
-                  </div>
-                  {errors.conversation_type && <span className="error-message">{errors.conversation_type}</span>}
                 </div>
               </div>
             </div>
@@ -177,7 +146,6 @@ const GenerateProposal = ({ className }) => {
 
 export default styled(GenerateProposal)`
   min-height: 100vh;
-  background: linear-gradient(180deg, #2e4a6c 0%, #13345a 100%);
   position: relative;
   overflow-x: hidden;
 
@@ -198,7 +166,6 @@ export default styled(GenerateProposal)`
     
     .shape {
       position: absolute;
-      border-radius: 50%;
       background: rgba(255, 255, 255, 0.02);
       backdrop-filter: blur(1px);
       animation: float 20s infinite ease-in-out;
@@ -276,7 +243,6 @@ export default styled(GenerateProposal)`
       width: 80px;
       height: 80px;
       background: rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
       margin-bottom: 24px;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -306,7 +272,6 @@ export default styled(GenerateProposal)`
   }
 
   .subtitle {
-    color: rgba(255, 255, 255, 0.8);
     font-size: 1.2rem;
     font-weight: 400;
     margin: 0;
@@ -330,7 +295,6 @@ export default styled(GenerateProposal)`
         align-items: center;
         justify-content: center;
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
         backdrop-filter: blur(10px);
       }
       
@@ -363,7 +327,6 @@ export default styled(GenerateProposal)`
     display: block;
     margin-bottom: 12px;
     font-weight: 600;
-    color: #fff;
     font-size: 1rem;
     line-height: 1.4;
     
@@ -371,7 +334,6 @@ export default styled(GenerateProposal)`
       display: block;
       font-weight: 400;
       font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.6);
       margin-top: 2px;
     }
   }
@@ -385,7 +347,6 @@ export default styled(GenerateProposal)`
       left: 0;
       width: 0;
       height: 2px;
-      background: linear-gradient(90deg, #667eea, #764ba2);
       transition: width 0.3s ease;
     }
   }
@@ -394,28 +355,26 @@ export default styled(GenerateProposal)`
     width: 100%;
     padding: 16px 20px;
     border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
     font-size: 15px;
     font-weight: 500;
     transition: all 0.3s ease;
-    color: #fff;
     font-family: inherit;
     
     &::placeholder {
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(10, 10, 10, 0.5);
     }
     
     &:hover {
-      border-color: rgba(255, 255, 255, 0.2);
+      border-color: rgba(8, 8, 8, 0.2);
       background: rgba(255, 255, 255, 0.08);
       transform: translateY(-1px);
     }
     
     &:focus {
       outline: none;
-      border-color: rgba(102, 126, 234, 0.5);
+      border-color: rgba(23, 28, 49, 0.5);
       background: rgba(255, 255, 255, 0.1);
       box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
       transform: translateY(-2px);
@@ -436,7 +395,6 @@ export default styled(GenerateProposal)`
     
     option {
       background: #2e4a6c;
-      color: #fff;
       padding: 12px;
     }
   }
@@ -467,7 +425,7 @@ export default styled(GenerateProposal)`
     margin-top: 60px;
     
     .submit-hint {
-      color: rgba(255, 255, 255, 0.6);
+      color: rgba(0, 0, 0, 0.6);
       font-size: 14px;
       margin-top: 16px;
       margin-bottom: 0;
@@ -476,9 +434,8 @@ export default styled(GenerateProposal)`
 
   .generate-btn {
     position: relative;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5d8066 0%, #0d3b2c 100%);
     border: none;
-    border-radius: 16px;
     height: 60px;
     font-size: 1.2rem;
     font-weight: 700;

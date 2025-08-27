@@ -509,7 +509,6 @@ export default styled(OnboardingWizard)`
     max-width: 800px;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
-    border-radius: 24px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
     overflow: hidden;
   }
@@ -525,7 +524,6 @@ export default styled(OnboardingWizard)`
         
         .ant-progress-bg {
           height: 8px !important;
-          border-radius: 4px;
         }
       }
       
@@ -554,7 +552,6 @@ export default styled(OnboardingWizard)`
         width: 80px;
         height: 80px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -609,7 +606,6 @@ export default styled(OnboardingWizard)`
       .ant-input,
       .ant-select-selector,
       .ant-input-password {
-        border-radius: 12px;
         border: 2px solid #e9ecef;
         transition: all 0.3s ease;
         
@@ -634,7 +630,6 @@ export default styled(OnboardingWizard)`
       }
       
       .ant-select-dropdown {
-        border-radius: 12px;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
       }
     }
@@ -643,7 +638,6 @@ export default styled(OnboardingWizard)`
   .api-keys-section {
     .api-key-card {
       margin-bottom: 20px;
-      border-radius: 16px;
       border: 2px solid #f8f9fa;
       transition: all 0.3s ease;
       
@@ -669,7 +663,6 @@ export default styled(OnboardingWizard)`
   .info-card {
     background: linear-gradient(135deg, #667eea15, #764ba215);
     border: 2px solid rgba(102, 126, 234, 0.2);
-    border-radius: 16px;
     margin-top: 24px;
     
     .info-content {
@@ -693,7 +686,6 @@ export default styled(OnboardingWizard)`
         
         .ant-checkbox {
           .ant-checkbox-inner {
-            border-radius: 6px;
             border-width: 2px;
             
             &:hover {
@@ -720,7 +712,6 @@ export default styled(OnboardingWizard)`
         width: 120px;
         height: 120px;
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -745,7 +736,6 @@ export default styled(OnboardingWizard)`
       margin-top: 40px;
       
       .summary-card {
-        border-radius: 16px;
         border: 2px solid #f8f9fa;
         
         .summary-item {
@@ -757,7 +747,6 @@ export default styled(OnboardingWizard)`
             width: 40px;
             height: 40px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -799,13 +788,11 @@ export default styled(OnboardingWizard)`
       }
       
       .ant-btn {
-        border-radius: 12px;
         height: 48px;
         padding: 0 24px;
         font-weight: 600;
         
         &.ant-btn-primary {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           border: none;
           box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
           

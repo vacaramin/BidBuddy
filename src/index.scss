@@ -4,17 +4,19 @@
 }
 
 :root {
+  --primaryTextColor: #000;
+  --primaryBackgroundColor: #ffffff;
+  --primaryBackgroundSidebar:  linear-gradient(180deg, #2e4a6c 0%, #13345a 100%);
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--primaryTextColor);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: "sfpro";
- background: linear-gradient(180deg, #2e4a6c 0%, #13345a 100%);
 }
 
 body {

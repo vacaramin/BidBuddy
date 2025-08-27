@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { useState } from "preact/hooks";
-import { Bed, History, Home, Menu, Notebook, Settings } from "lucide-preact";
+import { History, Home, Menu, Notebook, Settings } from "lucide-preact";
 import Logo from "../components/Logo";
 import { Link, useRouter } from "preact-router";
 import Topbar from "./Topbar";
@@ -9,7 +9,6 @@ const navItems = [
   { name: "Home", icon: <Home />, path: "/" },
   { name: "Generate Proposal", icon: <Notebook />, path: "/proposal" },
   { name: "History", icon: <History />, path: "/history" },
-  { name: "Sleep Cycle", icon: <Bed />, path: "/sleep-cycle" },
   {
     name: "Settings",
     icon: <Settings className="settings" />,
@@ -53,8 +52,7 @@ const Sidebar = ({ className, children }) => {
 
 export default styled(Sidebar)`
   display: flex;
-  min-height: 100vh;
-  height: 100%;
+  height: 100vh;
 
   .sidebar {
     color: white;
@@ -66,6 +64,7 @@ export default styled(Sidebar)`
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     overflow-y: auto;
+    background: var(--primaryBackgroundSidebar);
   }
 
   .sidebar.open {
@@ -138,18 +137,21 @@ export default styled(Sidebar)`
   }
 
   .rightSection {
+    background-color: #ffffff;
     display: flex;
     flex-direction: column;
     width: 100%;
+    color: var(--primaryTextColor);
     padding: 20px;
-
+    max-height: 100vh;
+    overflow-y:auto ;
     .topSection {
       display: flex;
       flex-direction: row-reverse;
       align-items: center;
       margin: 0px 20px;
-      height: 50px;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 10px 0px;
+      border-bottom: 2px solid rgba(31, 31, 31, 0.3);
     }
 
     .content {

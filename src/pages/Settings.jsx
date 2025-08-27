@@ -197,12 +197,6 @@ const Settings = ({ className }) => {
     <div className={className}>
       <div className="container">
         <div className="settings-card">
-          <div className="card-header">
-            <div className="icon-wrapper">
-              <span className="icon">⚙️</span>
-            </div>
-          </div>
-
           {successMessage && (
             <div className="success-message">
               <span className="success-icon">✅</span>
@@ -237,16 +231,12 @@ const Settings = ({ className }) => {
           <div className="tab-content">
             {activeTab === 'personal' && (
               <div className="section">
-                <div className="section-header">
-                  <span className="section-icon">👤</span>
-                  <h2>Personal Information</h2>
-                </div>
+               
                 
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="name">
                       Full Name *
-                      <span className="label-hint">Your professional name</span>
                     </label>
                     <div className="input-wrapper">
                       <input
@@ -265,7 +255,6 @@ const Settings = ({ className }) => {
                   <div className="form-group">
                     <label htmlFor="email">
                       Email Address *
-                      <span className="label-hint">Your professional email</span>
                     </label>
                     <div className="input-wrapper">
                       <input
@@ -286,7 +275,6 @@ const Settings = ({ className }) => {
                   <div className="form-group">
                     <label htmlFor="phone">
                       Phone Number
-                      <span className="label-hint">Optional contact number</span>
                     </label>
                     <div className="input-wrapper">
                       <input
@@ -303,7 +291,6 @@ const Settings = ({ className }) => {
                   <div className="form-group">
                     <label htmlFor="portfolioUrl">
                       Portfolio URL
-                      <span className="label-hint">Your portfolio website</span>
                     </label>
                     <div className="input-wrapper">
                       <input
@@ -324,7 +311,6 @@ const Settings = ({ className }) => {
                   <div className="form-group">
                     <label htmlFor="githubUrl">
                       GitHub URL
-                      <span className="label-hint">Your GitHub profile</span>
                     </label>
                     <div className="input-wrapper">
                       <input
@@ -343,7 +329,6 @@ const Settings = ({ className }) => {
                   <div className="form-group">
                     <label htmlFor="linkedinUrl">
                       LinkedIn URL
-                      <span className="label-hint">Your LinkedIn profile</span>
                     </label>
                     <div className="input-wrapper">
                       <input
@@ -364,11 +349,6 @@ const Settings = ({ className }) => {
 
             {activeTab === 'api' && (
               <div className="section">
-                <div className="section-header">
-                  <span className="section-icon">🔑</span>
-                  <h2>API Keys</h2>
-                  <p className="section-description">Configure your AI provider API keys. These are stored locally and never shared.</p>
-                </div>
                 
                 {settings.apiKeys.map((apiKey) => (
                   <div key={apiKey.id} className="api-key-group">
@@ -400,66 +380,45 @@ const Settings = ({ className }) => {
                     </div>
                   </div>
                 ))}
-                
-                <div className="api-info">
-                  <h4>🔒 Security Note:</h4>
-                  <p>Your API keys are stored locally in your browser and are never transmitted to our servers. Make sure to keep them secure and never share them publicly.</p>
-                </div>
               </div>
             )}
 
             {activeTab === 'prompts' && (
               <div className="section">
-                <div className="section-header">
-                  <span className="section-icon">💬</span>
-                  <h2>Prompt Settings</h2>
-                  <p className="section-description">Customize how your proposals are generated</p>
-                </div>
-                
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="defaultTone">
-                      Default Tone
-                      <span className="label-hint">Default writing style for proposals</span>
-                    </label>
-                    <div className="input-wrapper">
-                      <select
-                        id="defaultTone"
-                        value={settings.promptSettings.defaultTone}
-                        onChange={(e) => handlePromptSettingChange('defaultTone', e.target.value)}
-                      >
-                        <option value="professional">🎩 Professional</option>
-                        <option value="friendly">😊 Friendly</option>
-                        <option value="casual">👋 Casual</option>
-                        <option value="formal">📋 Formal</option>
-                        <option value="enthusiastic">🚀 Enthusiastic</option>
-                      </select>
-                      <div className="input-border"></div>
-                    </div>
-                  </div>
+    
 
-                  <div className="form-group">
-                    <label htmlFor="defaultUrgency">
-                      Default Urgency
-                      <span className="label-hint">Default urgency level</span>
-                    </label>
-                    <div className="input-wrapper">
-                      <select
-                        id="defaultUrgency"
-                        value={settings.promptSettings.defaultUrgency}
-                        onChange={(e) => handlePromptSettingChange('defaultUrgency', e.target.value)}
-                      >
-                        <option value="low">🐌 Low Priority</option>
-                        <option value="normal">⏰ Normal</option>
-                        <option value="high">🔥 High Priority</option>
-                        <option value="urgent">⚡ Urgent</option>
-                      </select>
-                      <div className="input-border"></div>
-                    </div>
+                <div className="form-group">
+                  <label htmlFor="customPromptPrefix">
+                    Custom Prompt Prefix
+                  </label>
+                  <div className="input-wrapper">
+                    <textarea
+                      id="customPromptPrefix"
+                      rows={3}
+                      placeholder="e.g., 'As an experienced developer with 5+ years in web development...'"
+                      value={settings.promptSettings.customPromptPrefix}
+                      onChange={(e) => handlePromptSettingChange('customPromptPrefix', e.target.value)}
+                    />
+                    <div className="input-border"></div>
                   </div>
                 </div>
 
-                <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="customPromptSuffix">
+                    Custom Prompt Suffix
+                  </label>
+                  <div className="input-wrapper">
+                    <textarea
+                      id="customPromptSuffix"
+                      rows={3}
+                      placeholder="e.g., 'I'm available to start immediately and would love to discuss this project further.'"
+                      value={settings.promptSettings.customPromptSuffix}
+                      onChange={(e) => handlePromptSettingChange('customPromptSuffix', e.target.value)}
+                    />
+                    <div className="input-border"></div>
+                  </div>
+                </div>
+                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="maxWords">
                       Maximum Words
@@ -478,80 +437,19 @@ const Settings = ({ className }) => {
                       <div className="input-border"></div>
                     </div>
                   </div>
-
-                  <div className="form-group">
-                    <div className="checkbox-group">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={settings.promptSettings.includePersonalInfo}
-                          onChange={(e) => handlePromptSettingChange('includePersonalInfo', e.target.checked)}
-                        />
-                        <span className="checkmark"></span>
-                        Include Personal Info
-                      </label>
-                      <span className="checkbox-hint">Automatically include your contact details in proposals</span>
-                    </div>
-
-                    <div className="checkbox-group">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={settings.promptSettings.includeCallToAction}
-                          onChange={(e) => handlePromptSettingChange('includeCallToAction', e.target.checked)}
-                        />
-                        <span className="checkmark"></span>
-                        Include Call to Action
-                      </label>
-                      <span className="checkbox-hint">Add a compelling call-to-action at the end</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="customPromptPrefix">
-                    Custom Prompt Prefix
-                    <span className="label-hint">Text to add before the project description</span>
-                  </label>
-                  <div className="input-wrapper">
-                    <textarea
-                      id="customPromptPrefix"
-                      rows={3}
-                      placeholder="e.g., 'As an experienced developer with 5+ years in web development...'"
-                      value={settings.promptSettings.customPromptPrefix}
-                      onChange={(e) => handlePromptSettingChange('customPromptPrefix', e.target.value)}
-                    />
-                    <div className="input-border"></div>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="customPromptSuffix">
-                    Custom Prompt Suffix
-                    <span className="label-hint">Text to add after the project description</span>
-                  </label>
-                  <div className="input-wrapper">
-                    <textarea
-                      id="customPromptSuffix"
-                      rows={3}
-                      placeholder="e.g., 'I'm available to start immediately and would love to discuss this project further.'"
-                      value={settings.promptSettings.customPromptSuffix}
-                      onChange={(e) => handlePromptSettingChange('customPromptSuffix', e.target.value)}
-                    />
-                    <div className="input-border"></div>
-                  </div>
                 </div>
               </div>
+              
             )}
+                       
+               
           </div>
 
           <div className="actions">
             <button type="button" className="reset-btn" onClick={resetToDefaults}>
-              <span className="btn-icon">🔄</span>
               Reset to Defaults
             </button>
             <button type="button" className="save-btn" onClick={handleSave}>
-              <span className="btn-icon">💾</span>
               Save Settings
             </button>
           </div>
@@ -687,7 +585,6 @@ export default styled(Settings)`
     }
 
     &.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
     }

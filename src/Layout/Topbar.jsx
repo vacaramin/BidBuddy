@@ -33,7 +33,6 @@ export default styled(Topbar)`
   gap: 10px;
 
   .github-contribute {
-    border-radius: 5px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -51,7 +50,7 @@ export default styled(Topbar)`
     }
 
     p {
-      color: rgba(255, 255, 255, 0.7);
+      color: var(--primaryTextColor);
       margin: 0;
     }
   }
