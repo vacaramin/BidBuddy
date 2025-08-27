@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { useState } from "preact/hooks";
-import { History, Home, Menu, Notebook, Settings } from "lucide-preact";
+import { History, Home, Menu, Notebook, Settings, X } from "lucide-preact";
 import Logo from "../components/Logo";
 import { Link, useRouter } from "preact-router";
 import Topbar from "./Topbar";
@@ -9,40 +9,60 @@ const navItems = [
   { name: "Home", icon: <Home />, path: "/" },
   { name: "Generate Proposal", icon: <Notebook />, path: "/proposal" },
   { name: "History", icon: <History />, path: "/history" },
-  {
-    name: "Settings",
-    icon: <Settings className="settings" />,
-    path: "/settings",
-  },
+  { name: "Settings", icon: <Settings />, path: "/settings" },
 ];
+
 const Sidebar = ({ className, children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [router] = useRouter();
   const currentPath = router.url;
 
+  const closeSidebar = () => setIsOpen(false);
+
   return (
     <div className={className}>
+      {/* Mobile overlay */}
+      {isOpen && <div className="overlay" onClick={closeSidebar} />}
+      
       <aside className={`sidebar ${isOpen ? "open" : ""}`}>
         <div className="header">
           <Logo />
-          <Menu className="menuIcon" onClick={() => setIsOpen(!isOpen)} />
+          <button 
+            className="closeIcon" 
+            onClick={closeSidebar}
+            aria-label="Close sidebar"
+          >
+            <X />
+          </button>
         </div>
         <nav>
           <ul className="navMenu">
             {navItems.map(({ name, icon, path }) => (
-              <Link
-                href={path}
-                className={`navItem ${currentPath === path ? "active" : ""}`}
-              >
-                {icon} {name}
-              </Link>
+              <li key={path}>
+                <Link
+                  href={path}
+                  className={`navItem ${currentPath === path ? "active" : ""}`}
+                  onClick={closeSidebar}
+                >
+                  {icon} 
+                  <span>{name}</span>
+                </Link>
+              </li>
             ))}
           </ul>
         </nav>
       </aside>
+
       <div className="rightSection">
         <section className="topSection">
-          <Topbar></Topbar>
+          <button 
+            className="menuIcon" 
+            onClick={() => setIsOpen(true)}
+            aria-label="Open sidebar"
+          >
+            <Menu />
+          </button>
+          <Topbar />
         </section>
         <main className="content">{children}</main>
       </div>
@@ -53,18 +73,37 @@ const Sidebar = ({ className, children }) => {
 export default styled(Sidebar)`
   display: flex;
   height: 100vh;
+  position: relative;
+  overflow: hidden;
+
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    display: none;
+  }
 
   .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    max-width: 280px;
     color: white;
-    width: 350px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
-    overflow-y: auto;
     background: var(--primaryBackgroundSidebar);
+    z-index: 999;
+    overflow: hidden;
+    box-sizing: border-box;
   }
 
   .sidebar.open {
@@ -73,66 +112,101 @@ export default styled(Sidebar)`
 
   .header {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     padding: 20px;
-    font-weight: 900;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .closeIcon {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+  }
+
+  .closeIcon:hover {
+    background-color: rgba(255, 255, 255, 0.1);
   }
 
   .menuIcon {
+    background: none;
+    border: none;
+    color: var(--primaryTextColor);
     font-size: 24px;
     cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
   }
+
+  .menuIcon:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
   nav {
-    min-width: 100%;
+    flex: 1;
+    padding: 20px 0;
+    overflow-y: auto;
+    min-height: 0;
+    box-sizing: border-box;
+    width: 100%;
 
     .navMenu {
       list-style: none;
       padding: 0;
+      margin: 0;
       width: 100%;
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
-      justify-content: flex-start;
+      box-sizing: border-box;
     }
 
     .navItem {
-      width: calc(100% - 40px);
-      padding: 12px 20px;
-      margin: 8px 0;
+      width: 100%;
+      padding: 16px 24px;
       text-align: left;
       font-size: 16px;
-      font-weight: bold;
+      font-weight: 500;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background-color 0.2s;
       text-decoration: none;
       color: inherit;
       display: flex;
       align-items: center;
-      justify-content: flex-start;
-      gap: 5px;
-
-      .settings {
-        animation: rotate 8s linear infinite;
-
-        @keyframes rotate {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      }
+      gap: 12px;
+      border: none;
+      box-sizing: border-box;
+      white-space: nowrap;
+      overflow: hidden;
     }
 
     .navItem:hover {
-      background-color: rgba(255, 255, 255, 0.05);
+      background-color: rgba(255, 255, 255, 0.08);
     }
 
     .navItem.active {
       color: #1890ff;
-      transition: color 0.3s;
+      background-color: rgba(24, 144, 255, 0.1);
+      font-weight: 900;
+      border-right: 3px solid #1890ff;
+    }
+
+    .navItem span {
+      flex: 1;
     }
   }
 
@@ -141,32 +215,87 @@ export default styled(Sidebar)`
     display: flex;
     flex-direction: column;
     width: 100%;
+    min-height: 100vh;
     color: var(--primaryTextColor);
-    padding: 20px;
-    max-height: 100vh;
-    overflow-y:auto ;
-    .topSection {
-      display: flex;
-      flex-direction: row-reverse;
-      align-items: center;
-      margin: 0px 20px;
-      padding: 10px 0px;
-      border-bottom: 2px solid rgba(31, 31, 31, 0.3);
+  }
+
+  .topSection {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(31, 31, 31, 0.1);
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .content {
+    flex: 1;
+    padding: 24px 20px;
+    overflow-y: auto;
+  }
+
+  /* Desktop styles */
+  @media (min-width: 768px) {
+    .sidebar {
+      position: relative;
+      transform: translateX(0);
+      width: 280px;
+      box-shadow: none;
+      border-right: 1px solid rgba(31, 31, 31, 0.1);
     }
 
-    .content {
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
+    .overlay {
+      display: none !important;
+    }
+
+    .menuIcon {
+      display: none;
+    }
+
+    .closeIcon {
+      display: none;
+    }
+
+    .topSection {
+      justify-content: flex-end;
+    }
+
+    .rightSection {
+      margin-left: 0;
     }
   }
 
-  @media (min-width: 768px) {
-    .sidebar {
-      transform: translateX(0);
+  /* Mobile-specific styles */
+  @media (max-width: 767px) {
+    .overlay {
+      display: block;
     }
-    .menuIcon {
-      display: none;
+
+    .rightSection {
+      width: 100%;
+    }
+
+    .content {
+      padding: 20px 16px;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 480px) {
+    .sidebar {
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .content {
+      padding: 16px 12px;
+    }
+
+    .topSection {
+      padding: 12px 16px;
     }
   }
 `;

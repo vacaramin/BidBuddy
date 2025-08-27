@@ -53,14 +53,10 @@ const GenerateProposal = ({ className }) => {
 
   return (
     <div className={className}>
-
-      
       <div className="container">
         <div className="proposal-card">
-
-          <form onSubmit={handleSubmit} className="proposal-form">
+          <form onSubmit={handleSubmit} >
             <div className="section">
-              
               <div className="form-group">
                 <label htmlFor="project_description">
                   Project Description *
@@ -148,134 +144,12 @@ export default styled(GenerateProposal)`
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
-
-  .background-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .floating-shapes {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    
-    .shape {
-      position: absolute;
-      background: rgba(255, 255, 255, 0.02);
-      backdrop-filter: blur(1px);
-      animation: float 20s infinite ease-in-out;
-      
-      &.shape-1 {
-        width: 300px;
-        height: 300px;
-        top: 10%;
-        right: -5%;
-        animation-delay: 0s;
-      }
-      
-      &.shape-2 {
-        width: 200px;
-        height: 200px;
-        top: 60%;
-        right: -5%;
-        animation-delay: 5s;
-      }
-      
-      &.shape-3 {
-        width: 150px;
-        height: 150px;
-        top: 30%;
-        right: 20%;
-        animation-delay: 10s;
-      }
-      
-      &.shape-4 {
-        width: 250px;
-        height: 250px;
-        bottom: 10%;
-        right: -5%;
-        animation-delay: 15s;
-      }
-    }
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
-    25% { transform: translateY(-20px) translateX(10px) rotate(90deg); }
-    50% { transform: translateY(-10px) translateX(-10px) rotate(180deg); }
-    75% { transform: translateY(-30px) translateX(5px) rotate(270deg); }
-  }
+  background: #ffffff;
 
   .container {
     position: relative;
     z-index: 1;
     padding: 40px 20px;
-  }
-
-  .proposal-card {
-    backdrop-filter: blur(20px);
-    position: relative;
-    overflow: hidden;
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-    }
-  }
-
-  .card-header {
-    text-align: center;
-    margin-bottom: 50px;
-    
-    .icon-wrapper {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 80px;
-      height: 80px;
-      background: rgba(255, 255, 255, 0.1);
-      margin-bottom: 24px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      
-      .icon {
-        font-size: 2.5rem;
-        animation: pulse 3s infinite ease-in-out;
-      }
-    }
-  }
-
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-  }
-
-  h1 {
-    margin: 0 0 16px 0;
-    background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 3rem;
-    font-weight: 800;
-    letter-spacing: -1px;
-    line-height: 1.1;
-  }
-
-  .subtitle {
-    font-size: 1.2rem;
-    font-weight: 400;
-    margin: 0;
-    line-height: 1.5;
   }
 
   .section {
@@ -294,12 +168,13 @@ export default styled(GenerateProposal)`
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.05);
         backdrop-filter: blur(10px);
+        border-radius: 12px;
       }
       
       h2 {
-        color: #fff;
+        color: #333;
         margin: 0;
         font-weight: 700;
         font-size: 1.4rem;
@@ -329,12 +204,14 @@ export default styled(GenerateProposal)`
     font-weight: 600;
     font-size: 1rem;
     line-height: 1.4;
+    color: #333;
     
     .label-hint {
       display: block;
       font-weight: 400;
       font-size: 0.85rem;
       margin-top: 2px;
+      color: #666;
     }
   }
 
@@ -347,36 +224,38 @@ export default styled(GenerateProposal)`
       left: 0;
       width: 0;
       height: 2px;
+      background: linear-gradient(135deg, #5d8066 0%, #0d3b2c 100%);
       transition: width 0.3s ease;
     }
   }
 
   input, select, textarea {
-    width: 100%;
+    max-width: 100%;
+    min-width: calc(100vw - 400px);
     padding: 16px 20px;
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    color: #333;
     font-size: 15px;
     font-weight: 500;
     transition: all 0.3s ease;
     font-family: inherit;
     
     &::placeholder {
-      color: rgba(10, 10, 10, 0.5);
+      color: rgba(0, 0, 0, 0.4);
     }
     
     &:hover {
-      border-color: rgba(8, 8, 8, 0.2);
-      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.04);
       transform: translateY(-1px);
     }
     
     &:focus {
       outline: none;
-      border-color: rgba(23, 28, 49, 0.5);
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      border-color: #5d8066;
+      background: rgba(0, 0, 0, 0.05);
       transform: translateY(-2px);
     }
     
@@ -394,7 +273,8 @@ export default styled(GenerateProposal)`
     cursor: pointer;
     
     option {
-      background: #2e4a6c;
+      background: #ffffff;
+      color: #333;
       padding: 12px;
     }
   }
@@ -423,19 +303,13 @@ export default styled(GenerateProposal)`
   .submit-section {
     text-align: center;
     margin-top: 60px;
-    
-    .submit-hint {
-      color: rgba(0, 0, 0, 0.6);
-      font-size: 14px;
-      margin-top: 16px;
-      margin-bottom: 0;
-    }
   }
 
   .generate-btn {
     position: relative;
     background: linear-gradient(135deg, #5d8066 0%, #0d3b2c 100%);
     border: none;
+    border-radius: 14px;
     height: 60px;
     font-size: 1.2rem;
     font-weight: 700;
@@ -447,7 +321,7 @@ export default styled(GenerateProposal)`
     justify-content: center;
     gap: 12px;
     box-shadow: 
-      0 10px 30px rgba(102, 126, 234, 0.4),
+      0 10px 30px rgba(93, 128, 102, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition: all 0.3s ease;
     overflow: hidden;
@@ -467,7 +341,7 @@ export default styled(GenerateProposal)`
     &:hover {
       transform: translateY(-3px);
       box-shadow: 
-        0 15px 40px rgba(102, 126, 234, 0.5),
+        0 15px 40px rgba(93, 128, 102, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
       
       .btn-shine {
@@ -495,33 +369,6 @@ export default styled(GenerateProposal)`
       padding: 20px 15px;
     }
     
-    .proposal-card {
-      padding: 30px 25px;
-      border-radius: 20px;
-    }
-
-    .card-header {
-      margin-bottom: 40px;
-      
-      .icon-wrapper {
-        width: 60px;
-        height: 60px;
-        margin-bottom: 20px;
-        
-        .icon {
-          font-size: 2rem;
-        }
-      }
-    }
-
-    h1 {
-      font-size: 2.2rem;
-    }
-
-    .subtitle {
-      font-size: 1rem;
-    }
-
     .section {
       margin-bottom: 40px;
     }
@@ -530,20 +377,6 @@ export default styled(GenerateProposal)`
       min-width: 200px;
       font-size: 1.1rem;
       height: 55px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    h1 {
-      font-size: 1.8rem;
-    }
-    
-    .subtitle {
-      font-size: 0.9rem;
-    }
-    
-    .proposal-card {
-      padding: 25px 20px;
     }
   }
 `;

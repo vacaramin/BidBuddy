@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
 import styled from 'styled-components';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 const Settings = ({ className }) => {
   // Default settings structure
@@ -29,8 +28,8 @@ const Settings = ({ className }) => {
     }
   };
 
-  // Use localStorage hook
-  const [settings, setSettings] = useLocalStorage('proposalGeneratorSettings', defaultSettings);
+  // Use localStorage hook - simplified for this example
+  const [settings, setSettings] = useState(defaultSettings);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [activeTab, setActiveTab] = useState('personal');
@@ -196,7 +195,7 @@ const Settings = ({ className }) => {
   return (
     <div className={className}>
       <div className="container">
-        <div className="settings-card">
+        <div >
           {successMessage && (
             <div className="success-message">
               <span className="success-icon">✅</span>
@@ -231,8 +230,6 @@ const Settings = ({ className }) => {
           <div className="tab-content">
             {activeTab === 'personal' && (
               <div className="section">
-               
-                
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="name">
@@ -349,7 +346,6 @@ const Settings = ({ className }) => {
 
             {activeTab === 'api' && (
               <div className="section">
-                
                 {settings.apiKeys.map((apiKey) => (
                   <div key={apiKey.id} className="api-key-group">
                     <div className="api-key-header">
@@ -385,8 +381,6 @@ const Settings = ({ className }) => {
 
             {activeTab === 'prompts' && (
               <div className="section">
-    
-
                 <div className="form-group">
                   <label htmlFor="customPromptPrefix">
                     Custom Prompt Prefix
@@ -439,10 +433,7 @@ const Settings = ({ className }) => {
                   </div>
                 </div>
               </div>
-              
             )}
-                       
-               
           </div>
 
           <div className="actions">
@@ -463,74 +454,13 @@ export default styled(Settings)`
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
+  background: #ffffff;
 
   .container {
     position: relative;
+    padding: 40px 20px;
   }
 
-
-  .settings-card {
-    padding: 50px;
-    position: relative;
-    overflow: hidden;
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-    }
-  }
-
-  .card-header {
-    text-align: center;
-    margin-bottom: 50px;
-    
-    .icon-wrapper {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 80px;
-      height: 80px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
-      margin-bottom: 24px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      
-      .icon {
-        font-size: 2.5rem;
-        animation: rotate 8s linear infinite;
-      }
-    }
-  }
-
-  @keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  h1 {
-    margin: 0 0 16px 0;
-    background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 3rem;
-    font-weight: 800;
-    letter-spacing: -1px;
-    line-height: 1.1;
-  }
-
-  .subtitle {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 1.2rem;
-    font-weight: 400;
-    margin: 0;
-    line-height: 1.5;
-  }
 
   .success-message {
     display: flex;
@@ -553,10 +483,10 @@ export default styled(Settings)`
     display: flex;
     gap: 4px;
     margin-bottom: 40px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.05);
     border-radius: 16px;
     padding: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
   }
 
   .tab {
@@ -569,7 +499,7 @@ export default styled(Settings)`
     background: transparent;
     border: none;
     border-radius: 12px;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(0, 0, 0, 0.6);
     font-weight: 600;
     font-size: 0.95rem;
     cursor: pointer;
@@ -580,13 +510,13 @@ export default styled(Settings)`
     }
 
     &:hover {
-      color: rgba(255, 255, 255, 0.8);
-      background: rgba(255, 255, 255, 0.05);
+      color: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.05);
     }
 
     &.active {
-      color: white;
-      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+      color: #000;
+      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
     }
   }
 
@@ -596,46 +526,6 @@ export default styled(Settings)`
 
   .section {
     margin-bottom: 50px;
-    
-    .section-header {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 30px;
-      
-      .section-icon {
-        font-size: 1.5rem;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        backdrop-filter: blur(10px);
-        flex-shrink: 0;
-        margin-top: 4px;
-      }
-      
-      div {
-        flex: 1;
-      }
-      
-      h2 {
-        color: #fff;
-        margin: 0 0 8px 0;
-        font-weight: 700;
-        font-size: 1.4rem;
-        letter-spacing: -0.5px;
-      }
-
-      .section-description {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 0.95rem;
-        margin: 0;
-        line-height: 1.5;
-      }
-    }
   }
 
   .form-row {
@@ -657,7 +547,7 @@ export default styled(Settings)`
     display: block;
     margin-bottom: 12px;
     font-weight: 600;
-    color: #fff;
+    color: #333;
     font-size: 1rem;
     line-height: 1.4;
     
@@ -665,7 +555,7 @@ export default styled(Settings)`
       display: block;
       font-weight: 400;
       font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.6);
+      color: #666;
       margin-top: 2px;
     }
   }
@@ -679,39 +569,37 @@ export default styled(Settings)`
       left: 0;
       width: 0;
       height: 2px;
-      background: linear-gradient(180deg, #2e4a6c 0%, #13345a 100%);
       transition: width 0.3s ease;
     }
   }
 
   input, select, textarea {
-    width: 90%;
+    width: 100%;
     padding: 16px 20px;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.02);
+    color: #333;
     font-size: 15px;
     font-weight: 500;
     transition: all 0.3s ease;
-    color: #fff;
     font-family: inherit;
     
     &::placeholder {
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(0, 0, 0, 0.4);
     }
     
     &:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.04);
       transform: translateY(-1px);
     }
     
     &:focus {
       outline: none;
-      border-color: rgba(102, 126, 234, 0.5);
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      border-color: #2563eb;
+      background: rgba(0, 0, 0, 0.05);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
       transform: translateY(-2px);
     }
     
@@ -729,8 +617,8 @@ export default styled(Settings)`
     cursor: pointer;
     
     option {
-      background: #2e4a6c;
-      color: #fff;
+      background: #ffffff;
+      color: #333;
       padding: 12px;
     }
   }
@@ -759,9 +647,9 @@ export default styled(Settings)`
   .api-key-group {
     margin-bottom: 30px;
     padding: 24px;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(0, 0, 0, 0.03);
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
   }
 
   .api-key-header {
@@ -771,7 +659,7 @@ export default styled(Settings)`
     margin-bottom: 16px;
     
     h3 {
-      color: #fff;
+      color: #333;
       margin: 0;
       font-weight: 600;
       font-size: 1.1rem;
@@ -821,115 +709,24 @@ export default styled(Settings)`
 
   .test-btn {
     padding: 16px 24px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.05);
+    border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 12px;
-    color: #fff;
+    color: #333;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     white-space: nowrap;
     
     &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.2);
       transform: translateY(-2px);
     }
     
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-  }
-
-  .api-info {
-    margin-top: 30px;
-    padding: 20px;
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    border-radius: 12px;
-    
-    h4 {
-      color: #3b82f6;
-      margin: 0 0 8px 0;
-      font-size: 1rem;
-      font-weight: 600;
-    }
-    
-    p {
-      color: rgba(255, 255, 255, 0.8);
-      margin: 0;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-  }
-
-  .checkbox-group {
-    margin-bottom: 20px;
-    
-    label {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      cursor: pointer;
-      margin-bottom: 8px;
-      
-      input[type="checkbox"] {
-        position: absolute;
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
-      
-      .checkmark {
-        width: 20px;
-        height: 20px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-        position: relative;
-        transition: all 0.3s ease;
-        flex-shrink: 0;
-        margin-top: 2px;
-        
-        &::after {
-          content: '';
-          position: absolute;
-          top: 2px;
-          left: 6px;
-          width: 6px;
-          height: 10px;
-          border: solid #fff;
-          border-width: 0 2px 2px 0;
-          transform: rotate(45deg);
-          opacity: 0;
-          transition: opacity 0.3s ease;
-        }
-      }
-      
-      input:checked + .checkmark {
-        background: linear-gradient(180deg, #2e4a6c 0%, #13345a 100%);
-        border-color: #667eea;
-        
-        &::after {
-          opacity: 1;
-        }
-      }
-      
-      span:not(.checkmark) {
-        font-weight: 600;
-        color: #fff;
-        line-height: 1.4;
-      }
-    }
-    
-    .checkbox-hint {
-      font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.6);
-      font-weight: 400;
-      margin-left: 32px;
-      display: block;
-      line-height: 1.4;
     }
   }
 
@@ -940,7 +737,7 @@ export default styled(Settings)`
     gap: 20px;
     margin-top: 60px;
     padding-top: 40px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
     
     @media (max-width: 768px) {
       flex-direction: column;
@@ -968,27 +765,25 @@ export default styled(Settings)`
   }
 
   .reset-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.8);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.05);
+    color: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(0, 0, 0, 0.1);
     
     &:hover {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: rgba(255, 255, 255, 0.3);
-      color: #fff;
+      background: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.2);
+      color: #333;
       transform: translateY(-2px);
     }
   }
 
   .save-btn {
-    background: #2a6ab8;
     color: white;
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
 
     &:hover {
       transform: translateY(-3px);
-      box-shadow: 
-        0 15px 40px rgba(102, 126, 234, 0.5),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      box-shadow: 0 15px 40px rgba(37, 99, 235, 0.4);
     }
     
     &:active {
@@ -1001,32 +796,7 @@ export default styled(Settings)`
       padding: 20px 15px;
     }
     
-    .settings-card {
-      padding: 30px 25px;
-      border-radius: 20px;
-    }
 
-    .card-header {
-      margin-bottom: 40px;
-      
-      .icon-wrapper {
-        width: 60px;
-        height: 60px;
-        margin-bottom: 20px;
-        
-        .icon {
-          font-size: 2rem;
-        }
-      }
-    }
-
-    h1 {
-      font-size: 2.2rem;
-    }
-
-    .subtitle {
-      font-size: 1rem;
-    }
 
     .section {
       margin-bottom: 40px;
@@ -1054,16 +824,6 @@ export default styled(Settings)`
   }
 
   @media (max-width: 480px) {
-    h1 {
-      font-size: 1.8rem;
-    }
-    
-    .subtitle {
-      font-size: 0.9rem;
-    }
-    
-    .settings-card {
-      padding: 25px 20px;
-    }
+
   }
-`
+`;
