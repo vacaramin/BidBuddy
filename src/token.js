@@ -6,9 +6,14 @@ const token = {
     colorText: "#383838ff",
     colorTextSecondary: "rgba(255, 255, 255, 0.6)",
     iconFontSize: "20px",
-    paddingXXS: "10px",
+    fontSize: "16px",
+    fontWeight: "900",
   },
   components: {
+    Breadcrumb: {
+      iconFontSize: "40px",
+      lastItemColor: "#3d3d3dff",
+    },
     Card: {
       colorBgContainer: "rgba(255, 255, 255, 0.05)",
       colorBorderSecondary: "rgba(255, 255, 255, 0.1)",

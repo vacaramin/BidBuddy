@@ -2,7 +2,7 @@ import styled from "styled-components";
 import { useState } from "preact/hooks";
 import Github from "@/assets/icons/github.svg";
 import { Breadcrumb } from "antd";
-import { getCurrentUrl } from "preact-router";
+import { getCurrentUrl, Link } from "preact-router";
 import { HomeIcon } from "lucide-preact";
 
 const Topbar = ({ className }) => {
@@ -29,7 +29,7 @@ const Topbar = ({ className }) => {
     <div className={className}>
       <Breadcrumb
         items={[
-          { title: <HomeIcon size={20} /> },
+          { title: <HomeIcon size={20} />, href: "/" },
           ...(url !== "/"
             ? [{ title: breadCrumbMapping[url] }]
             : [{ title: "Home" }]),

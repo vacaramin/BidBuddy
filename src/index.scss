@@ -21,6 +21,7 @@
   ::-webkit-scrollbar {
     background: linear-gradient(180deg, #3088dbe8 0%, #1a699ea0 100%);
     width: 5px;
+    border-radius: 10px;
   }
 
   ::-webkit-scrollbar-thumb {
@@ -38,4 +39,7 @@ body {
     color: #213547;
     background-color: #ffffff;
   }
+}
+.ant-breadcrumb-link {
+  font-weight: 600 !important;
 }
