@@ -213,7 +213,7 @@ const Settings = ({ className }) => {
     <div className={className}>
       <h1>Settings</h1>
       <div className="container">
-        <div>
+        <div className="content-area">
           {successMessage && (
             <div className="success-message">
               <span className="success-icon">✅</span>
@@ -499,7 +499,10 @@ const Settings = ({ className }) => {
               </div>
             )}
           </div>
+        </div>
 
+        {/* Sticky Actions Bar */}
+        <div className="sticky-actions">
           <div className="actions">
             <button
               type="button"
@@ -527,6 +530,11 @@ export default styled(Settings)`
   .container {
     position: relative;
     padding: 0px 20px;
+  }
+
+  .content-area {
+    /* Add bottom padding to prevent content from being hidden behind sticky buttons */
+    padding-bottom: 120px;
   }
 
   .success-message {
@@ -791,18 +799,31 @@ export default styled(Settings)`
     }
   }
 
+  /* Sticky Actions Bar */
+  .sticky-actions {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 16px 20px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    width: calc(100% - var(--sidebarWidth) - 4px);
+  }
+
   .actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 20px;
-    margin-top: 60px;
-    padding-top: 40px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    margin: 0 auto;
 
     @media (max-width: 768px) {
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
   }
 
@@ -812,7 +833,7 @@ export default styled(Settings)`
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 16px 32px;
+    padding: 10px 20px;
     border: none;
     border-radius: 12px;
     font-size: 1rem;
@@ -856,6 +877,10 @@ export default styled(Settings)`
       padding: 20px 15px;
     }
 
+    .content-area {
+      padding-bottom: 140px; /* Extra padding on mobile for stacked buttons */
+    }
+
     .section {
       margin-bottom: 40px;
     }
@@ -874,10 +899,17 @@ export default styled(Settings)`
       }
     }
 
+    .sticky-actions {
+      padding: 12px 15px;
+
+      width: calc(100% - 30px);
+    }
+
     .actions {
       .reset-btn,
       .save-btn {
         width: 100%;
+        min-width: unset;
       }
     }
   }

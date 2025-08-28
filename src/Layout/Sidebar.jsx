@@ -92,8 +92,8 @@ export default styled(Sidebar)`
     top: 0;
     left: 0;
     height: 100vh;
-    width: 280px;
-    max-width: 280px;
+    width: var(--sidebarWidth);
+    max-width: var(--sidebarWidth);
     color: white;
     display: flex;
     flex-direction: column;
@@ -241,7 +241,7 @@ export default styled(Sidebar)`
     .sidebar {
       position: relative;
       transform: translateX(0);
-      width: 280px;
+      width: var(--sidebarWidth);
       box-shadow: none;
       border-right: 1px solid rgba(31, 31, 31, 0.1);
     }
@@ -286,7 +286,7 @@ export default styled(Sidebar)`
   @media (max-width: 480px) {
     .sidebar {
       width: 100%;
-      max-width: 320px;
+      max-width: var(--sidebarWidth);
     }
 
     .content {

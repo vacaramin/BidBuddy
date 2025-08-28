@@ -311,6 +311,7 @@ export default styled(Home)`
     margin-bottom: 40px;
 
     p {
+      padding: 0px 20px;
       color: #666;
       font-size: 1.1rem;
       margin: 0;
