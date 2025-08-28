@@ -9,6 +9,4 @@ const History = ({ className }) => {
   );
 };
 
-export default styled(History)`
-
-`;
+export default styled(History)``;

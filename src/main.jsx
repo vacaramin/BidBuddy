@@ -19,7 +19,6 @@ const Main = () => (
       <Sidebar path="/proposal" children={<GenerateProposal />} />
       <Sidebar path="/onboard" children={<OnboardingWizard />} />
       <Route path="*" component={<Home />}></Route>
-      
     </Router>
   </ConfigProvider>
 );

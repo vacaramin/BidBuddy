@@ -1,43 +1,43 @@
 import { useState } from "preact/hooks";
-import styled from 'styled-components';
+import styled from "styled-components";
 
 const GenerateProposal = ({ className }) => {
   const [formData, setFormData] = useState({
-    project_description: '',
-    llm_model: 'gpt-4',
-    llm_provider: 'openai',
-    conversation_type: 'proper_proposal',
-    tone: 'professional',
-    urgency: 'normal',
-    additional_notes: ''
+    project_description: "",
+    llm_model: "gpt-4",
+    llm_provider: "openai",
+    conversation_type: "proper_proposal",
+    tone: "professional",
+    urgency: "normal",
+    additional_notes: "",
   });
 
   const [errors, setErrors] = useState({});
 
   const handleInputChange = (name, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: "",
       }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.project_description.trim()) {
-      newErrors.project_description = 'Please describe the project!';
+      newErrors.project_description = "Please describe the project!";
     }
     if (!formData.llm_model) {
-      newErrors.llm_model = 'Please select an LLM model!';
+      newErrors.llm_model = "Please select an LLM model!";
     }
     if (!formData.conversation_type) {
-      newErrors.conversation_type = 'Please select proposal type!';
+      newErrors.conversation_type = "Please select proposal type!";
     }
 
     setErrors(newErrors);
@@ -47,15 +47,16 @@ const GenerateProposal = ({ className }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log('Success:', formData);
+      console.log("Success:", formData);
     }
   };
 
   return (
     <div className={className}>
+      <h1>Generate Propsal</h1>
       <div className="container">
         <div className="proposal-card">
-          <form onSubmit={handleSubmit} >
+          <form onSubmit={handleSubmit}>
             <div className="section">
               <div className="form-group">
                 <label htmlFor="project_description">
@@ -67,25 +68,31 @@ const GenerateProposal = ({ className }) => {
                     rows={4}
                     placeholder="Paste the project description from the job posting or describe your project in detail..."
                     value={formData.project_description}
-                    onChange={(e) => handleInputChange('project_description', e.target.value)}
-                    className={errors.project_description ? 'error' : ''}
+                    onChange={(e) =>
+                      handleInputChange("project_description", e.target.value)
+                    }
+                    className={errors.project_description ? "error" : ""}
                   />
                   <div className="input-border"></div>
                 </div>
-                {errors.project_description && <span className="error-message">{errors.project_description}</span>}
+                {errors.project_description && (
+                  <span className="error-message">
+                    {errors.project_description}
+                  </span>
+                )}
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="llm_model">
-                    AI Model *
-                  </label>
+                  <label htmlFor="llm_model">AI Model *</label>
                   <div className="input-wrapper">
                     <select
                       id="llm_model"
                       value={formData.llm_model}
-                      onChange={(e) => handleInputChange('llm_model', e.target.value)}
-                      className={errors.llm_model ? 'error' : ''}
+                      onChange={(e) =>
+                        handleInputChange("llm_model", e.target.value)
+                      }
+                      className={errors.llm_model ? "error" : ""}
                     >
                       <option value="">Choose AI model for generation</option>
                       <option value="gpt-4">🚀 GPT-4 (Recommended)</option>
@@ -97,7 +104,9 @@ const GenerateProposal = ({ className }) => {
                     </select>
                     <div className="input-border"></div>
                   </div>
-                  {errors.llm_model && <span className="error-message">{errors.llm_model}</span>}
+                  {errors.llm_model && (
+                    <span className="error-message">{errors.llm_model}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -107,11 +116,13 @@ const GenerateProposal = ({ className }) => {
                 <span className="section-icon">💡</span>
                 <h2>Additional Details</h2>
               </div>
-              
+
               <div className="form-group">
                 <label htmlFor="additional_notes">
                   Additional Notes
-                  <span className="label-hint">Any specific requirements or context</span>
+                  <span className="label-hint">
+                    Any specific requirements or context
+                  </span>
                 </label>
                 <div className="input-wrapper">
                   <textarea
@@ -119,7 +130,9 @@ const GenerateProposal = ({ className }) => {
                     rows={3}
                     placeholder="Share any specific requirements, deadlines, budget constraints, or special points you want to highlight..."
                     value={formData.additional_notes}
-                    onChange={(e) => handleInputChange('additional_notes', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("additional_notes", e.target.value)
+                    }
                   />
                   <div className="input-border"></div>
                 </div>
@@ -149,18 +162,18 @@ export default styled(GenerateProposal)`
   .container {
     position: relative;
     z-index: 1;
-    padding: 40px 20px;
+    padding: 0px 20px;
   }
 
   .section {
     margin-bottom: 50px;
-    
+
     .section-header {
       display: flex;
       align-items: center;
       gap: 12px;
       margin-bottom: 30px;
-      
+
       .section-icon {
         font-size: 1.5rem;
         width: 40px;
@@ -172,7 +185,7 @@ export default styled(GenerateProposal)`
         backdrop-filter: blur(10px);
         border-radius: 12px;
       }
-      
+
       h2 {
         color: #333;
         margin: 0;
@@ -187,7 +200,7 @@ export default styled(GenerateProposal)`
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 30px;
-    
+
     @media (max-width: 768px) {
       grid-template-columns: 1fr;
       gap: 20px;
@@ -205,7 +218,7 @@ export default styled(GenerateProposal)`
     font-size: 1rem;
     line-height: 1.4;
     color: #333;
-    
+
     .label-hint {
       display: block;
       font-weight: 400;
@@ -217,7 +230,7 @@ export default styled(GenerateProposal)`
 
   .input-wrapper {
     position: relative;
-    
+
     .input-border {
       position: absolute;
       bottom: 0;
@@ -229,7 +242,9 @@ export default styled(GenerateProposal)`
     }
   }
 
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     max-width: 100%;
     min-width: calc(100vw - 400px);
     padding: 16px 20px;
@@ -241,24 +256,24 @@ export default styled(GenerateProposal)`
     font-weight: 500;
     transition: all 0.3s ease;
     font-family: inherit;
-    
+
     &::placeholder {
       color: rgba(0, 0, 0, 0.4);
     }
-    
+
     &:hover {
       border-color: rgba(0, 0, 0, 0.2);
       background: rgba(0, 0, 0, 0.04);
       transform: translateY(-1px);
     }
-    
+
     &:focus {
       outline: none;
       border-color: #5d8066;
       background: rgba(0, 0, 0, 0.05);
       transform: translateY(-2px);
     }
-    
+
     &:focus + .input-border {
       width: 100%;
     }
@@ -271,7 +286,7 @@ export default styled(GenerateProposal)`
 
   select {
     cursor: pointer;
-    
+
     option {
       background: #ffffff;
       color: #333;
@@ -293,9 +308,9 @@ export default styled(GenerateProposal)`
     font-size: 13px;
     font-weight: 500;
     margin-top: 8px;
-    
+
     &::before {
-      content: '⚠️';
+      content: "⚠️";
       font-size: 12px;
     }
   }
@@ -320,44 +335,49 @@ export default styled(GenerateProposal)`
     align-items: center;
     justify-content: center;
     gap: 12px;
-    box-shadow: 
+    box-shadow:
       0 10px 30px rgba(93, 128, 102, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition: all 0.3s ease;
     overflow: hidden;
-    
+
     .btn-shine {
       position: absolute;
       top: -50%;
       left: -50%;
       width: 200%;
       height: 200%;
-      background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      background: linear-gradient(
+        45deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+      );
       transform: rotate(45deg);
       transition: all 0.6s ease;
       opacity: 0;
     }
-    
+
     &:hover {
       transform: translateY(-3px);
-      box-shadow: 
+      box-shadow:
         0 15px 40px rgba(93, 128, 102, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
-      
+
       .btn-shine {
         left: 100%;
         opacity: 1;
       }
     }
-    
+
     &:active {
       transform: translateY(-1px);
     }
-    
+
     .btn-icon {
       font-size: 1.3rem;
     }
-    
+
     .btn-text {
       font-weight: 700;
       letter-spacing: 0.5px;
@@ -365,10 +385,13 @@ export default styled(GenerateProposal)`
   }
 
   @media (max-width: 768px) {
+    textarea {
+      min-width: calc(100% - 30px);
+    }
     .container {
       padding: 20px 15px;
     }
-    
+
     .section {
       margin-bottom: 40px;
     }

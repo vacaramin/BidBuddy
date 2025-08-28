@@ -23,12 +23,12 @@ const Sidebar = ({ className, children }) => {
     <div className={className}>
       {/* Mobile overlay */}
       {isOpen && <div className="overlay" onClick={closeSidebar} />}
-      
+
       <aside className={`sidebar ${isOpen ? "open" : ""}`}>
         <div className="header">
           <Logo />
-          <button 
-            className="closeIcon" 
+          <button
+            className="closeIcon"
             onClick={closeSidebar}
             aria-label="Close sidebar"
           >
@@ -44,7 +44,7 @@ const Sidebar = ({ className, children }) => {
                   className={`navItem ${currentPath === path ? "active" : ""}`}
                   onClick={closeSidebar}
                 >
-                  {icon} 
+                  {icon}
                   <span>{name}</span>
                 </Link>
               </li>
@@ -55,8 +55,8 @@ const Sidebar = ({ className, children }) => {
 
       <div className="rightSection">
         <section className="topSection">
-          <button 
-            className="menuIcon" 
+          <button
+            className="menuIcon"
             onClick={() => setIsOpen(true)}
             aria-label="Open sidebar"
           >
