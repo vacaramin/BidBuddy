@@ -15,6 +15,7 @@
     "preact": "^10.26.2",
     "preact-router": "^4.1.2",
     "prettier": "^3.5.3",
+    "recharts": "^3.1.2",
     "sass": "^1.86.0",
     "styled-components": "^6.1.16"
   },

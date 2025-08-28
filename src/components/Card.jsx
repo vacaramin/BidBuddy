@@ -5,13 +5,14 @@ const Card = ({ className }) => {
 };
 
 export default styled(Card)`
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: #2372cc8a;
   min-height: 100px;
   padding: 5px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-
+  border-radius: 12px;
+  box-shadow: #2372cc8a 0px 2px 8px 0px;
   .iconBox {
     img {
     }

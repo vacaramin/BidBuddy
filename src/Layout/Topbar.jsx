@@ -30,7 +30,9 @@ const Topbar = ({ className }) => {
       <Breadcrumb
         items={[
           { title: <HomeIcon size={20} /> },
-          ...(url !== "/" ? [{ title: breadCrumbMapping[url] }] : []),
+          ...(url !== "/"
+            ? [{ title: breadCrumbMapping[url] }]
+            : [{ title: "Home" }]),
         ]}
       />
 
@@ -50,6 +52,7 @@ export default styled(Topbar)`
   .ant-breadcrumb {
     padding: 10px 0px;
   }
+
   height: 100%;
   width: 100%;
   display: flex;
@@ -65,22 +68,22 @@ export default styled(Topbar)`
     cursor: pointer;
     text-decoration: none;
     transition: background-color 300ms ease-in;
-    background-color: #3969a0;
+    background-color: #6296d3;
     color: white;
     padding: 10px 20px;
     border-radius: 12px;
+
     .github-icon {
       height: 25px;
       filter: brightness(0) invert(1);
     }
 
     &:hover {
-      background-color: #2d496b;
+      background-color: #3969a0;
     }
 
     p {
       margin: 0;
-
       color: white;
     }
   }

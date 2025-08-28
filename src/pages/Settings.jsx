@@ -1,5 +1,10 @@
 import { useState, useEffect } from "preact/hooks";
 import styled from "styled-components";
+import {
+  getFromStorage,
+  saveToStorage,
+  STORAGE_KEYS,
+} from "../utils/localStorage";
 
 const Settings = ({ className }) => {
   // Default settings structure
@@ -21,30 +26,27 @@ const Settings = ({ className }) => {
         apiKey: "",
         isValid: null,
       },
-      {
-        id: 3,
-        provider: "google",
-        name: "Google (Gemini)",
-        apiKey: "",
-        isValid: null,
-      },
     ],
     promptSettings: {
-      defaultTone: "professional",
-      defaultUrgency: "normal",
-      includePersonalInfo: true,
       customPromptPrefix: "",
       customPromptSuffix: "",
       maxWords: 500,
-      includeCallToAction: true,
     },
   };
 
-  // Use localStorage hook - simplified for this example
   const [settings, setSettings] = useState(defaultSettings);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
   const [activeTab, setActiveTab] = useState("personal");
+
+  // Load settings on component mount
+  useEffect(() => {
+    const savedSettings = getFromStorage(
+      STORAGE_KEYS.SETTINGS,
+      defaultSettings,
+    );
+    setSettings(savedSettings);
+  }, []);
 
   // Handle input changes for personal info
   const handlePersonalInfoChange = (field, value) => {
@@ -103,14 +105,12 @@ const Settings = ({ className }) => {
     }
   };
 
-  // Test API key (mock function)
+  // Test API key (mock function - you can replace with actual API calls)
   const testApiKey = async (provider, apiKey) => {
     if (!apiKey.trim()) return false;
 
-    // Mock API key validation - in real app, this would make actual API calls
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Simple validation based on key format
         let isValid = false;
         switch (provider) {
           case "openai":
@@ -118,9 +118,6 @@ const Settings = ({ className }) => {
             break;
           case "anthropic":
             isValid = apiKey.startsWith("sk-ant-") && apiKey.length > 30;
-            break;
-          case "google":
-            isValid = apiKey.length > 20;
             break;
           default:
             isValid = apiKey.length > 10;
@@ -153,7 +150,6 @@ const Settings = ({ className }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Validate personal info
     if (!settings.personalInfo.name.trim()) {
       newErrors.name = "Name is required";
     }
@@ -192,6 +188,7 @@ const Settings = ({ className }) => {
   // Handle save
   const handleSave = () => {
     if (validateForm()) {
+      saveToStorage(STORAGE_KEYS.SETTINGS, settings);
       setSuccessMessage("Settings saved successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     }
@@ -206,6 +203,7 @@ const Settings = ({ className }) => {
     ) {
       setSettings(defaultSettings);
       setErrors({});
+      saveToStorage(STORAGE_KEYS.SETTINGS, defaultSettings);
       setSuccessMessage("Settings reset to defaults");
       setTimeout(() => setSuccessMessage(""), 3000);
     }
@@ -213,6 +211,7 @@ const Settings = ({ className }) => {
 
   return (
     <div className={className}>
+      <h1>Settings</h1>
       <div className="container">
         <div>
           {successMessage && (
@@ -263,7 +262,6 @@ const Settings = ({ className }) => {
                         }
                         className={errors.name ? "error" : ""}
                       />
-                      <div className="input-border"></div>
                     </div>
                     {errors.name && (
                       <span className="error-message">{errors.name}</span>
@@ -283,7 +281,6 @@ const Settings = ({ className }) => {
                         }
                         className={errors.email ? "error" : ""}
                       />
-                      <div className="input-border"></div>
                     </div>
                     {errors.email && (
                       <span className="error-message">{errors.email}</span>
@@ -304,7 +301,6 @@ const Settings = ({ className }) => {
                           handlePersonalInfoChange("phone", e.target.value)
                         }
                       />
-                      <div className="input-border"></div>
                     </div>
                   </div>
 
@@ -324,7 +320,6 @@ const Settings = ({ className }) => {
                         }
                         className={errors.portfolioUrl ? "error" : ""}
                       />
-                      <div className="input-border"></div>
                     </div>
                     {errors.portfolioUrl && (
                       <span className="error-message">
@@ -348,7 +343,6 @@ const Settings = ({ className }) => {
                         }
                         className={errors.githubUrl ? "error" : ""}
                       />
-                      <div className="input-border"></div>
                     </div>
                     {errors.githubUrl && (
                       <span className="error-message">{errors.githubUrl}</span>
@@ -371,7 +365,6 @@ const Settings = ({ className }) => {
                         }
                         className={errors.linkedinUrl ? "error" : ""}
                       />
-                      <div className="input-border"></div>
                     </div>
                     {errors.linkedinUrl && (
                       <span className="error-message">
@@ -412,7 +405,6 @@ const Settings = ({ className }) => {
                             handleApiKeyChange(apiKey.id, e.target.value)
                           }
                         />
-                        <div className="input-border"></div>
                       </div>
                       <button
                         type="button"
@@ -455,7 +447,6 @@ const Settings = ({ className }) => {
                         )
                       }
                     />
-                    <div className="input-border"></div>
                   </div>
                 </div>
 
@@ -476,9 +467,9 @@ const Settings = ({ className }) => {
                         )
                       }
                     />
-                    <div className="input-border"></div>
                   </div>
                 </div>
+
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="maxWords">
@@ -502,7 +493,6 @@ const Settings = ({ className }) => {
                           )
                         }
                       />
-                      <div className="input-border"></div>
                     </div>
                   </div>
                 </div>
@@ -536,7 +526,7 @@ export default styled(Settings)`
 
   .container {
     position: relative;
-    padding: 40px 20px;
+    padding: 0px 20px;
   }
 
   .success-message {
@@ -639,21 +629,12 @@ export default styled(Settings)`
 
   .input-wrapper {
     position: relative;
-
-    .input-border {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 0;
-      height: 2px;
-      transition: width 0.3s ease;
-    }
   }
 
   input,
   select,
   textarea {
-    width: 100%;
+    width: calc(100% - 40px);
     padding: 16px 20px;
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 12px;
@@ -676,14 +657,10 @@ export default styled(Settings)`
 
     &:focus {
       outline: none;
-      border-color: #2563eb;
-      background: rgba(0, 0, 0, 0.05);
+      border-color: #dcebff;
+      background: rgba(54, 86, 133, 0.05);
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
       transform: translateY(-2px);
-    }
-
-    &:focus + .input-border {
-      width: 100%;
     }
 
     &.error {
@@ -841,12 +818,9 @@ export default styled(Settings)`
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
+    background-color: #6296d3;
     transition: all 0.3s ease;
     min-width: 160px;
-
-    .btn-icon {
-      font-size: 1.1rem;
-    }
   }
 
   .reset-btn {
@@ -869,6 +843,7 @@ export default styled(Settings)`
     &:hover {
       transform: translateY(-3px);
       box-shadow: 0 15px 40px rgba(37, 99, 235, 0.4);
+      background-color: #3969a0;
     }
 
     &:active {
@@ -905,8 +880,5 @@ export default styled(Settings)`
         width: 100%;
       }
     }
-  }
-
-  @media (max-width: 480px) {
   }
 `;

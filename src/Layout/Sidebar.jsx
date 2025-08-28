@@ -199,10 +199,10 @@ export default styled(Sidebar)`
     }
 
     .navItem.active {
-      color: #1890ff;
+      color: #83c3ff;
       background-color: rgba(24, 144, 255, 0.1);
-      font-weight: 900;
-      border-right: 3px solid #1890ff;
+      font-weight: 900 !important;
+      border-right: 3px solid #83c3ff;
     }
 
     .navItem span {
@@ -221,7 +221,6 @@ export default styled(Sidebar)`
 
   .topSection {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
     border-bottom: 1px solid rgba(31, 31, 31, 0.1);
@@ -233,7 +232,7 @@ export default styled(Sidebar)`
 
   .content {
     flex: 1;
-    padding: 24px 20px;
+    padding: 0px 20px;
     overflow-y: auto;
   }
 

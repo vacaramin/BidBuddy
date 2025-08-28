@@ -17,6 +17,16 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: "sfpro";
+
+  ::-webkit-scrollbar {
+    background: linear-gradient(180deg, #3088dbe8 0%, #1a699ea0 100%);
+    width: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.514);
+    border-radius: 10px;
+  }
 }
 
 body {
