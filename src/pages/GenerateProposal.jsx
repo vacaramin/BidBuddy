@@ -59,7 +59,7 @@ const GenerateProposal = ({ className }) => {
     const personalInfo = settings?.personalInfo || {};
     const promptSettings = settings?.promptSettings || {};
 
-    let prompt = `${promptSettings.customPromptPrefix || "As a professional freelancer,"} 
+    let prompt = `${promptSettings.customPromptPrefix || ""}  
 
 I need you to write a compelling project proposal based on the following project description:
 
@@ -67,8 +67,7 @@ I need you to write a compelling project proposal based on the following project
 
 ${formData.additional_notes ? `Additional context: ${formData.additional_notes}` : ""}
 
-Please create a proposal that is approximately ${promptSettings.maxWords || 500} words
-
+Please create a proposal that includes my personal details and is approximately ${promptSettings.maxWords || 500} words
 ${personalInfo.name ? `My name is ${personalInfo.name}.` : ""}
 ${personalInfo.portfolioUrl ? `Portfolio: ${personalInfo.portfolioUrl}` : ""}
 ${personalInfo.githubUrl ? `GitHub: ${personalInfo.githubUrl}` : ""}
