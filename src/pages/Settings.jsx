@@ -522,7 +522,7 @@ const Settings = ({ className }) => {
 };
 
 export default styled(Settings)`
-  min-height: 100vh;
+  min-height: calc(100vh - var(--topBarHeight));
   position: relative;
   overflow-x: hidden;
   background: #ffffff;

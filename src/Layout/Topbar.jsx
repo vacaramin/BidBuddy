@@ -56,6 +56,7 @@ export default styled(Topbar)`
 
   height: 100%;
   width: 100%;
+  max-height: var(--topBarHeight);
   display: flex;
   justify-content: space-between;
   align-items: center;

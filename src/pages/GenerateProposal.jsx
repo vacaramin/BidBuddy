@@ -196,7 +196,7 @@ ${promptSettings.customPromptSuffix || ""}`;
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "100vh",
+          height: "calc(100vh - var(--topBarHeight))",
         }}
       >
         <div class="loader"></div>
@@ -415,7 +415,7 @@ ${promptSettings.customPromptSuffix || ""}`;
 };
 
 export default styled(GenerateProposal)`
-  min-height: 100vh;
+  min-height: calc(100vh - var(--topBarHeight));
   position: relative;
   overflow-x: hidden;
   background: #ffffff;

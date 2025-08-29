@@ -546,7 +546,7 @@ const ImportExport = ({ className }) => {
 };
 
 export default styled(ImportExport)`
-  min-height: 100vh;
+  min-height: calc(100vh - var(--topBarHeight));
   background: #ffffff;
   box-sizing: border-box;
 

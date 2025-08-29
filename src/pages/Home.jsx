@@ -304,7 +304,7 @@ const Home = ({ className }) => {
 };
 
 export default styled(Home)`
-  min-height: 100vh;
+  min-height: calc(100vh - var(--topBarHeight));
   background: #ffffff;
 
   .dashboard-header {
