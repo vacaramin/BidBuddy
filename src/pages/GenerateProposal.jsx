@@ -189,12 +189,19 @@ ${promptSettings.customPromptSuffix || ""}`;
   const hasValidApiKey = () => {
     return getApiKey() !== null;
   };
-  if(isGenerating){
+  if (isGenerating) {
     return (
-    <div style={{display: "flex", justifyContent: "center", alignItems: "center", height: "100vh"}}>
-      <div class="loader"></div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <div class="loader"></div>
       </div>
-      )
+    );
   }
 
   return (
@@ -374,13 +381,6 @@ ${promptSettings.customPromptSuffix || ""}`;
             </div>
 
             <div className="results-content">
-              <div className="result-section">
-                <h3>Generated Prompt:</h3>
-                <div className="prompt-text">
-                  <pre>{generatedPrompt}</pre>
-                </div>
-              </div>
-
               {generatedProposal && (
                 <div className="result-section">
                   <h3>Generated Proposal:</h3>
@@ -399,6 +399,13 @@ ${promptSettings.customPromptSuffix || ""}`;
                   </p>
                 </div>
               )}
+
+              <div className="result-section">
+                <h3>Generated Prompt:</h3>
+                <div className="prompt-text">
+                  <pre>{generatedPrompt}</pre>
+                </div>
+              </div>
             </div>
           </div>
         )}
