@@ -807,6 +807,7 @@ export default styled(Settings)`
     z-index: 1000;
     padding: 16px 20px;
     width: calc(100% - var(--sidebarWidth) - 4px);
+    background-color: rgba(255, 255, 255, 0.95);
   }
 
   .actions {
@@ -897,7 +898,6 @@ export default styled(Settings)`
 
     .sticky-actions {
       padding: 12px 15px;
-      background-color: rgba(255, 255, 255, 0.95);
       width: calc(100% - 30px);
     }
 
