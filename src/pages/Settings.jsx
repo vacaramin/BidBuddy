@@ -805,11 +805,7 @@ export default styled(Settings)`
     bottom: 0;
     right: 0;
     z-index: 1000;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
     padding: 16px 20px;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
     width: calc(100% - var(--sidebarWidth) - 4px);
   }
 
@@ -901,7 +897,7 @@ export default styled(Settings)`
 
     .sticky-actions {
       padding: 12px 15px;
-
+      background-color: rgba(255, 255, 255, 0.95);
       width: calc(100% - 30px);
     }
 

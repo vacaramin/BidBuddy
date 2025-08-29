@@ -1,6 +1,14 @@
 import styled from "styled-components";
 import { useState } from "preact/hooks";
-import { History, Home, Menu, Notebook, Settings, X } from "lucide-preact";
+import {
+  History,
+  Home,
+  Import,
+  Menu,
+  Notebook,
+  Settings,
+  X,
+} from "lucide-preact";
 import Logo from "../components/Logo";
 import { Link, useRouter } from "preact-router";
 import Topbar from "./Topbar";
@@ -10,7 +18,7 @@ const navItems = [
   { name: "Generate Proposal", icon: <Notebook />, path: "/proposal" },
   { name: "History", icon: <History />, path: "/history" },
   { name: "Settings", icon: <Settings />, path: "/settings" },
-  { name: "Import/Export", icon: <Settings />, path: "/import-export" },
+  { name: "Import/Export", icon: <Import />, path: "/import-export" },
 ];
 
 const Sidebar = ({ className, children }) => {
@@ -94,7 +102,6 @@ export default styled(Sidebar)`
     left: 0;
     height: 100vh;
     width: var(--sidebarWidth);
-    max-width: var(--sidebarWidth);
     color: white;
     display: flex;
     flex-direction: column;
