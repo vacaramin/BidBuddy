@@ -9,6 +9,7 @@ import GenerateProposal from "./pages/GenerateProposal.jsx";
 import History from "./pages/History.jsx";
 import Settings from "./pages/Settings.jsx";
 import OnboardingWizard from "./pages/OnboardingWizard.jsx";
+import ImportExport from "./pages/ImportExport.jsx";
 
 const Main = () => (
   <ConfigProvider theme={token}>
@@ -18,6 +19,7 @@ const Main = () => (
       <Sidebar path="/history" children={<History />} />
       <Sidebar path="/proposal" children={<GenerateProposal />} />
       <Sidebar path="/onboard" children={<OnboardingWizard />} />
+      <Sidebar path="/import-export" children={<ImportExport />} />
       <Route path="*" component={<Home />}></Route>
     </Router>
   </ConfigProvider>

@@ -10,6 +10,7 @@ const navItems = [
   { name: "Generate Proposal", icon: <Notebook />, path: "/proposal" },
   { name: "History", icon: <History />, path: "/history" },
   { name: "Settings", icon: <Settings />, path: "/settings" },
+  { name: "Import/Export", icon: <Settings />, path: "/import-export" },
 ];
 
 const Sidebar = ({ className, children }) => {
