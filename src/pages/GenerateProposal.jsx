@@ -67,12 +67,7 @@ I need you to write a compelling project proposal based on the following project
 
 ${formData.additional_notes ? `Additional context: ${formData.additional_notes}` : ""}
 
-Please create a proposal that:
-- Demonstrates understanding of the project requirements
-- Highlights relevant skills and experience
-- Shows enthusiasm and professionalism
-- Includes a clear approach or methodology
-- Is approximately ${promptSettings.maxWords || 500} words
+Please create a proposal that is approximately ${promptSettings.maxWords || 500} words
 
 ${personalInfo.name ? `My name is ${personalInfo.name}.` : ""}
 ${personalInfo.portfolioUrl ? `Portfolio: ${personalInfo.portfolioUrl}` : ""}
