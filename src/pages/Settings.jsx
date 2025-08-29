@@ -35,9 +35,13 @@ const Settings = ({ className }) => {
   };
 
   const [settings, setSettings] = useState(defaultSettings);
+  const [profiles, setProfiles] = useState([]);
+  const [currentProfileId, setCurrentProfileId] = useState(null);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
-  const [activeTab, setActiveTab] = useState("personal");
+  const [activeTab, setActiveTab] = useState("profiles");
+  const [showProfileForm, setShowProfileForm] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(null);
 
   // Load settings on component mount
   useEffect(() => {
@@ -45,8 +49,44 @@ const Settings = ({ className }) => {
       STORAGE_KEYS.SETTINGS,
       defaultSettings,
     );
+    const savedProfiles = getFromStorage(STORAGE_KEYS.PROFILES, []);
+    const savedCurrentProfileId = getFromStorage(STORAGE_KEYS.CURRENT_PROFILE_ID, null);
+    
     setSettings(savedSettings);
+    setProfiles(savedProfiles);
+    setCurrentProfileId(savedCurrentProfileId);
+
+    // If no profiles exist, create a default one
+    if (savedProfiles.length === 0) {
+      const defaultProfile = {
+        ...defaultSettings,
+        id: "default",
+        name: "Default Profile",
+        description: "Your main bidding profile",
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setProfiles([defaultProfile]);
+      setCurrentProfileId("default");
+      saveToStorage(STORAGE_KEYS.PROFILES, [defaultProfile]);
+      saveToStorage(STORAGE_KEYS.CURRENT_PROFILE_ID, "default");
+    }
   }, []);
+
+  // Update settings when profile changes
+  useEffect(() => {
+    if (currentProfileId && profiles.length > 0) {
+      const currentProfile = profiles.find(p => p.id === currentProfileId);
+      if (currentProfile) {
+        setSettings({
+          personalInfo: { ...currentProfile.personalInfo },
+          apiKeys: [...currentProfile.apiKeys],
+          promptSettings: { ...currentProfile.promptSettings },
+        });
+      }
+    }
+  }, [currentProfileId, profiles]);
 
   // Handle input changes for personal info
   const handlePersonalInfoChange = (field, value) => {
@@ -86,6 +126,108 @@ const Settings = ({ className }) => {
         [field]: value,
       },
     }));
+  };
+
+  // Profile management functions
+  const saveCurrentProfile = () => {
+    if (currentProfileId && profiles.length > 0) {
+      const updatedProfiles = profiles.map(profile => {
+        if (profile.id === currentProfileId) {
+          return {
+            ...profile,
+            personalInfo: { ...settings.personalInfo },
+            apiKeys: [...settings.apiKeys],
+            promptSettings: { ...settings.promptSettings },
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return profile;
+      });
+      setProfiles(updatedProfiles);
+      saveToStorage(STORAGE_KEYS.PROFILES, updatedProfiles);
+    }
+  };
+
+  const createProfile = (profileData) => {
+    const newProfile = {
+      ...defaultSettings,
+      id: `profile_${Date.now()}`,
+      name: profileData.name,
+      description: profileData.description,
+      isActive: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedProfiles = [...profiles, newProfile];
+    setProfiles(updatedProfiles);
+    saveToStorage(STORAGE_KEYS.PROFILES, updatedProfiles);
+    
+    setShowProfileForm(false);
+    setEditingProfile(null);
+    setSuccessMessage("Profile created successfully!");
+    setTimeout(() => setSuccessMessage(""), 3000);
+  };
+
+  const updateProfile = (profileId, profileData) => {
+    const updatedProfiles = profiles.map(profile => {
+      if (profile.id === profileId) {
+        return {
+          ...profile,
+          name: profileData.name,
+          description: profileData.description,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return profile;
+    });
+    
+    setProfiles(updatedProfiles);
+    saveToStorage(STORAGE_KEYS.PROFILES, updatedProfiles);
+    
+    setShowProfileForm(false);
+    setEditingProfile(null);
+    setSuccessMessage("Profile updated successfully!");
+    setTimeout(() => setSuccessMessage(""), 3000);
+  };
+
+  const switchProfile = (profileId) => {
+    saveCurrentProfile();
+    
+    setCurrentProfileId(profileId);
+    saveToStorage(STORAGE_KEYS.CURRENT_PROFILE_ID, profileId);
+    
+    const updatedProfiles = profiles.map(profile => ({
+      ...profile,
+      isActive: profile.id === profileId,
+    }));
+    setProfiles(updatedProfiles);
+    saveToStorage(STORAGE_KEYS.PROFILES, updatedProfiles);
+    
+    setSuccessMessage("Profile switched successfully!");
+    setTimeout(() => setSuccessMessage(""), 3000);
+  };
+
+  const deleteProfile = (profileId) => {
+    if (profiles.length <= 1) {
+      alert("You must have at least one profile.");
+      return;
+    }
+
+    if (window.confirm("Are you sure you want to delete this profile? This action cannot be undone.")) {
+      const updatedProfiles = profiles.filter(profile => profile.id !== profileId);
+      setProfiles(updatedProfiles);
+      saveToStorage(STORAGE_KEYS.PROFILES, updatedProfiles);
+      
+      if (currentProfileId === profileId) {
+        const newCurrentProfileId = updatedProfiles[0].id;
+        setCurrentProfileId(newCurrentProfileId);
+        saveToStorage(STORAGE_KEYS.CURRENT_PROFILE_ID, newCurrentProfileId);
+      }
+      
+      setSuccessMessage("Profile deleted successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
   };
 
   // Validate email format
@@ -188,7 +330,7 @@ const Settings = ({ className }) => {
   // Handle save
   const handleSave = () => {
     if (validateForm()) {
-      saveToStorage(STORAGE_KEYS.SETTINGS, settings);
+      saveCurrentProfile();
       setSuccessMessage("Settings saved successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     }
@@ -203,10 +345,65 @@ const Settings = ({ className }) => {
     ) {
       setSettings(defaultSettings);
       setErrors({});
-      saveToStorage(STORAGE_KEYS.SETTINGS, defaultSettings);
       setSuccessMessage("Settings reset to defaults");
       setTimeout(() => setSuccessMessage(""), 3000);
     }
+  };
+
+  // Profile Form Component
+  const ProfileForm = ({ profile, onSubmit, onCancel }) => {
+    const [formData, setFormData] = useState({
+      name: profile?.name || "",
+      description: profile?.description || "",
+    });
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (!formData.name.trim()) {
+        alert("Profile name is required");
+        return;
+      }
+      onSubmit(formData);
+    };
+
+    return (
+      <div className="profile-form-overlay">
+        <div className="profile-form">
+          <h3>{profile ? "Edit Profile" : "Create New Profile"}</h3>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="profileName">Profile Name *</label>
+              <input
+                id="profileName"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Freelancer Profile, Agency Profile"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="profileDescription">Description</label>
+              <textarea
+                id="profileDescription"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe this profile's purpose or specialization"
+                rows={3}
+              />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="cancel-btn" onClick={onCancel}>
+                Cancel
+              </button>
+              <button type="submit" className="submit-btn">
+                {profile ? "Update Profile" : "Create Profile"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -222,6 +419,13 @@ const Settings = ({ className }) => {
           )}
 
           <div className="tabs">
+            <button
+              className={`tab ${activeTab === "profiles" ? "active" : ""}`}
+              onClick={() => setActiveTab("profiles")}
+            >
+              <span className="tab-icon">👥</span>
+              Profiles
+            </button>
             <button
               className={`tab ${activeTab === "personal" ? "active" : ""}`}
               onClick={() => setActiveTab("personal")}
@@ -246,8 +450,81 @@ const Settings = ({ className }) => {
           </div>
 
           <div className="tab-content">
+            {activeTab === "profiles" && (
+              <div className="section">
+                <div className="profiles-header">
+                  <h2>Bidding Profiles</h2>
+                  <p>Manage different profiles for different types of bidding projects</p>
+                  <button
+                    className="create-profile-btn"
+                    onClick={() => setShowProfileForm(true)}
+                  >
+                    + Create New Profile
+                  </button>
+                </div>
+
+                <div className="profiles-grid">
+                  {profiles.map((profile) => (
+                    <div
+                      key={profile.id}
+                      className={`profile-card ${profile.isActive ? "active" : ""}`}
+                    >
+                      <div className="profile-header">
+                        <h3>{profile.name}</h3>
+                        {profile.isActive && (
+                          <span className="active-badge">Active</span>
+                        )}
+                      </div>
+                      <p className="profile-description">{profile.description}</p>
+                      <div className="profile-meta">
+                        <span>Created: {new Date(profile.createdAt).toLocaleDateString()}</span>
+                        <span>Updated: {new Date(profile.updatedAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="profile-actions">
+                        {!profile.isActive && (
+                          <button
+                            className="switch-btn"
+                            onClick={() => switchProfile(profile.id)}
+                          >
+                            Switch to This Profile
+                          </button>
+                        )}
+                        <button
+                          className="edit-btn"
+                          onClick={() => {
+                            setEditingProfile(profile);
+                            setShowProfileForm(true);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        {profiles.length > 1 && (
+                          <button
+                            className="delete-btn"
+                            onClick={() => deleteProfile(profile.id)}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {profiles.length === 0 && (
+                  <div className="no-profiles">
+                    <p>No profiles created yet. Create your first profile to get started!</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === "personal" && (
               <div className="section">
+                <div className="section-header">
+                  <h2>Personal Information</h2>
+                  <p>Configure your personal details for the current profile: <strong>{profiles.find(p => p.id === currentProfileId)?.name || "Default Profile"}</strong></p>
+                </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="name">Full Name *</label>
@@ -378,6 +655,10 @@ const Settings = ({ className }) => {
 
             {activeTab === "api" && (
               <div className="section">
+                <div className="section-header">
+                  <h2>API Keys</h2>
+                  <p>Configure API keys for the current profile: <strong>{profiles.find(p => p.id === currentProfileId)?.name || "Default Profile"}</strong></p>
+                </div>
                 {settings.apiKeys.map((apiKey) => (
                   <div key={apiKey.id} className="api-key-group">
                     <div className="api-key-header">
@@ -430,6 +711,10 @@ const Settings = ({ className }) => {
 
             {activeTab === "prompts" && (
               <div className="section">
+                <div className="section-header">
+                  <h2>Prompt Settings</h2>
+                  <p>Configure prompt settings for the current profile: <strong>{profiles.find(p => p.id === currentProfileId)?.name || "Default Profile"}</strong></p>
+                </div>
                 <div className="form-group">
                   <label htmlFor="customPromptPrefix">
                     Custom Prompt Prefix
@@ -517,6 +802,17 @@ const Settings = ({ className }) => {
           </div>
         </div>
       </div>
+
+      {showProfileForm && (
+        <ProfileForm
+          profile={editingProfile}
+          onSubmit={editingProfile ? updateProfile : createProfile}
+          onCancel={() => {
+            setShowProfileForm(false);
+            setEditingProfile(null);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -558,10 +854,10 @@ export default styled(Settings)`
     display: flex;
     gap: 4px;
     margin-bottom: 40px;
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 0.02);
     border-radius: 16px;
     padding: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.1);
   }
 
   .tab {
@@ -586,12 +882,15 @@ export default styled(Settings)`
 
     &:hover {
       color: rgba(0, 0, 0, 0.8);
-      background: rgba(0, 0, 0, 0.05);
+      background: rgba(0, 0, 0, 0.04);
+      transform: translateY(-1px);
     }
 
     &.active {
-      color: #000;
-      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+      color: #333;
+      background: rgba(98, 150, 211, 0.1);
+      border: 2px solid rgba(98, 150, 211, 0.3);
+      box-shadow: 0 4px 20px rgba(98, 150, 211, 0.15);
     }
   }
 
@@ -601,6 +900,24 @@ export default styled(Settings)`
 
   .section {
     margin-bottom: 50px;
+  }
+
+  .section-header {
+    margin-bottom: 30px;
+
+    h2 {
+      margin: 0 0 10px 0;
+      font-size: 1.8rem;
+      color: #333;
+      font-weight: 700;
+    }
+
+    p {
+      margin: 0;
+      color: #666;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
   }
 
   .form-row {
@@ -642,7 +959,7 @@ export default styled(Settings)`
   input,
   select,
   textarea {
-    width: calc(100% - 40px);
+    width: 100%;
     padding: 16px 20px;
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 12px;
@@ -652,6 +969,7 @@ export default styled(Settings)`
     font-weight: 500;
     transition: all 0.3s ease;
     font-family: inherit;
+    box-sizing: border-box;
 
     &::placeholder {
       color: rgba(0, 0, 0, 0.4);
@@ -665,15 +983,15 @@ export default styled(Settings)`
 
     &:focus {
       outline: none;
-      border-color: #dcebff;
-      background: rgba(54, 86, 133, 0.05);
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+      border-color: rgba(98, 150, 211, 0.6);
+      background: rgba(98, 150, 211, 0.05);
+      box-shadow: 0 0 0 4px rgba(98, 150, 211, 0.1);
       transform: translateY(-2px);
     }
 
     &.error {
-      border-color: rgba(255, 77, 79, 0.6);
-      background: rgba(255, 77, 79, 0.05);
+      border-color: rgba(239, 68, 68, 0.6);
+      background: rgba(239, 68, 68, 0.05);
     }
   }
 
@@ -697,7 +1015,7 @@ export default styled(Settings)`
     display: flex;
     align-items: center;
     gap: 6px;
-    color: #ff6b6b;
+    color: #ef4444;
     font-size: 13px;
     font-weight: 500;
     margin-top: 8px;
@@ -711,9 +1029,15 @@ export default styled(Settings)`
   .api-key-group {
     margin-bottom: 30px;
     padding: 24px;
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(0, 0, 0, 0.02);
+    border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
   }
 
   .api-key-header {
@@ -725,14 +1049,14 @@ export default styled(Settings)`
     h3 {
       color: #333;
       margin: 0;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 1.1rem;
     }
   }
 
   .status-badge {
-    padding: 4px 12px;
-    border-radius: 20px;
+    padding: 6px 12px;
+    border-radius: 12px;
     font-size: 0.8rem;
     font-weight: 600;
 
@@ -749,9 +1073,9 @@ export default styled(Settings)`
     }
 
     &.testing {
-      background: rgba(59, 130, 246, 0.2);
-      color: #3b82f6;
-      border: 1px solid rgba(59, 130, 246, 0.3);
+      background: rgba(98, 150, 211, 0.2);
+      color: #6296d3;
+      border: 1px solid rgba(98, 150, 211, 0.3);
       animation: pulse 2s infinite;
     }
   }
@@ -799,6 +1123,289 @@ export default styled(Settings)`
     }
   }
 
+  /* Profile Management Styles */
+  .profiles-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+
+    h2 {
+      margin: 0;
+      font-size: 1.8rem;
+      color: #333;
+      font-weight: 700;
+    }
+
+    p {
+      color: #666;
+      font-size: 1rem;
+      margin-bottom: 15px;
+    }
+
+    .create-profile-btn {
+      padding: 12px 24px;
+      background: #6296d3;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+
+      &:hover {
+        background: #5285c2;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(98, 150, 211, 0.3);
+      }
+    }
+  }
+
+  .profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  .profile-card {
+    background: rgba(0, 0, 0, 0.02);
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      transform: translateY(-3px);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    &.active {
+      border: 2px solid #6296d3;
+      box-shadow: 0 8px 24px rgba(98, 150, 211, 0.15);
+      background: rgba(98, 150, 211, 0.02);
+    }
+  }
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: #333;
+      font-weight: 700;
+    }
+
+    .active-badge {
+      background: rgba(98, 150, 211, 0.2);
+      color: #6296d3;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid rgba(98, 150, 211, 0.3);
+    }
+  }
+
+  .profile-description {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+  }
+
+  .profile-meta {
+    display: flex;
+    justify-content: space-between;
+    color: #888;
+    font-size: 0.85rem;
+    margin-bottom: 15px;
+  }
+
+  .profile-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.switch-btn {
+        background: #6296d3;
+        color: white;
+
+        &:hover {
+          background: #5285c2;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(98, 150, 211, 0.3);
+        }
+      }
+
+      &.edit-btn {
+        background: #6b7280;
+        color: white;
+
+        &:hover {
+          background: #52525b;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+        }
+      }
+
+      &.delete-btn {
+        background: #ef4444;
+        color: white;
+
+        &:hover {
+          background: #dc2626;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+      }
+    }
+  }
+
+  .no-profiles {
+    text-align: center;
+    padding: 40px 0;
+    color: #888;
+    font-size: 1.1rem;
+  }
+
+  .profile-form-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .profile-form {
+    background: #fff;
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    position: relative;
+    z-index: 1001;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .profile-form h3 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    color: #333;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+
+  .profile-form .form-group {
+    margin-bottom: 20px;
+  }
+
+  .profile-form label {
+    margin-bottom: 10px;
+    font-size: 1rem;
+    color: #333;
+    font-weight: 600;
+  }
+
+  .profile-form input,
+  .profile-form textarea {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.02);
+    color: #333;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+
+    &:hover {
+      border-color: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: rgba(98, 150, 211, 0.6);
+      background: rgba(98, 150, 211, 0.05);
+      box-shadow: 0 0 0 4px rgba(98, 150, 211, 0.1);
+    }
+
+    &.error {
+      border-color: rgba(239, 68, 68, 0.6);
+      background: rgba(239, 68, 68, 0.05);
+    }
+  }
+
+  .profile-form .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+  }
+
+  .profile-form .cancel-btn {
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #333;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.2);
+      transform: translateY(-2px);
+    }
+  }
+
+  .profile-form .submit-btn {
+    padding: 12px 24px;
+    background: #6296d3;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: #5285c2;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(98, 150, 211, 0.3);
+    }
+  }
+
   /* Sticky Actions Bar */
   .sticky-actions {
     position: fixed;
@@ -808,6 +1415,8 @@ export default styled(Settings)`
     padding: 16px 20px;
     width: calc(100% - var(--sidebarWidth) - 4px);
     background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 2px solid rgba(0, 0, 0, 0.1);
   }
 
   .actions {
@@ -830,7 +1439,7 @@ export default styled(Settings)`
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 10px 20px;
+    padding: 12px 24px;
     border: none;
     border-radius: 12px;
     font-size: 1rem;
@@ -856,12 +1465,12 @@ export default styled(Settings)`
 
   .save-btn {
     color: white;
-    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 8px 24px rgba(98, 150, 211, 0.3);
 
     &:hover {
       transform: translateY(-3px);
-      box-shadow: 0 15px 40px rgba(37, 99, 235, 0.4);
-      background-color: #3969a0;
+      box-shadow: 0 12px 32px rgba(98, 150, 211, 0.4);
+      background-color: #5285c2;
     }
 
     &:active {
@@ -907,6 +1516,80 @@ export default styled(Settings)`
         width: 100%;
         min-width: unset;
       }
+    }
+
+    /* Profile Management Mobile Styles */
+    .profiles-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+
+      .create-profile-btn {
+        width: 100%;
+      }
+    }
+
+    .profiles-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .profile-card {
+      padding: 20px;
+    }
+
+    .profile-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .profile-description {
+      font-size: 0.9rem;
+    }
+
+    .profile-meta {
+      font-size: 0.8rem;
+    }
+
+    .profile-actions {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .profile-form {
+      padding: 25px;
+      width: 95%;
+    }
+
+    .profile-form h3 {
+      font-size: 1.6rem;
+    }
+
+    .profile-form .form-group {
+      margin-bottom: 15px;
+    }
+
+    .profile-form label {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    .profile-form input,
+    .profile-form textarea {
+      padding: 12px 16px;
+      font-size: 14px;
+    }
+
+    .profile-form .form-actions {
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 25px;
+    }
+
+    .profile-form .cancel-btn,
+    .profile-form .submit-btn {
+      width: 100%;
+      padding: 10px 16px;
     }
   }
 `;

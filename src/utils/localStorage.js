@@ -2,6 +2,8 @@ export const STORAGE_KEYS = {
   SETTINGS: "bidbuddy_settings",
   PROPOSALS: "bidbuddy_proposals",
   ANALYTICS: "bidbuddy_analytics",
+  PROFILES: "bidbuddy_profiles",
+  CURRENT_PROFILE_ID: "bidbuddy_current_profile_id",
 };
 
 export const getFromStorage = (key, defaultValue = null) => {

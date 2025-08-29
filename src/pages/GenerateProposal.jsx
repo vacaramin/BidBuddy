@@ -15,7 +15,9 @@ const GenerateProposal = ({ className }) => {
     additional_notes: "",
   });
 
-  const [settings, setSettings] = useState(null);
+  const [profiles, setProfiles] = useState([]);
+  const [currentProfileId, setCurrentProfileId] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState(null);
   const [errors, setErrors] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedProposal, setGeneratedProposal] = useState("");
@@ -23,10 +25,67 @@ const GenerateProposal = ({ className }) => {
   const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
-    // Load settings on component mount
-    const savedSettings = getFromStorage(STORAGE_KEYS.SETTINGS);
-    setSettings(savedSettings);
+    // Load profiles and current profile on component mount
+    const savedProfiles = getFromStorage(STORAGE_KEYS.PROFILES, []);
+    const savedCurrentProfileId = getFromStorage(STORAGE_KEYS.CURRENT_PROFILE_ID, null);
+    
+    setProfiles(savedProfiles);
+    setCurrentProfileId(savedCurrentProfileId);
+
+    // If no profiles exist, create a default one
+    if (savedProfiles.length === 0) {
+      const defaultProfile = {
+        id: "default",
+        name: "Default Profile",
+        description: "Your main bidding profile",
+        personalInfo: {
+          name: "",
+          email: "",
+          phone: "",
+          githubUrl: "",
+          linkedinUrl: "",
+          portfolioUrl: "",
+        },
+        apiKeys: [
+          { id: 1, provider: "openai", name: "OpenAI", apiKey: "", isValid: null },
+          { id: 2, provider: "anthropic", name: "Anthropic (Claude)", apiKey: "", isValid: null },
+        ],
+        promptSettings: {
+          customPromptPrefix: "",
+          customPromptSuffix: "",
+          maxWords: 500,
+        },
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setProfiles([defaultProfile]);
+      setCurrentProfileId("default");
+      saveToStorage(STORAGE_KEYS.PROFILES, [defaultProfile]);
+      saveToStorage(STORAGE_KEYS.CURRENT_PROFILE_ID, "default");
+    }
   }, []);
+
+  // Update current profile when profile ID changes
+  useEffect(() => {
+    if (currentProfileId && profiles.length > 0) {
+      const profile = profiles.find(p => p.id === currentProfileId);
+      setCurrentProfile(profile);
+    }
+  }, [currentProfileId, profiles]);
+
+  const handleProfileChange = (profileId) => {
+    setCurrentProfileId(profileId);
+    saveToStorage(STORAGE_KEYS.CURRENT_PROFILE_ID, profileId);
+    
+    // Update active status
+    const updatedProfiles = profiles.map(profile => ({
+      ...profile,
+      isActive: profile.id === profileId,
+    }));
+    setProfiles(updatedProfiles);
+    saveToStorage(STORAGE_KEYS.PROFILES, updatedProfiles);
+  };
 
   const handleInputChange = (name, value) => {
     setFormData((prev) => ({
@@ -56,8 +115,8 @@ const GenerateProposal = ({ className }) => {
   };
 
   const buildPrompt = () => {
-    const personalInfo = settings?.personalInfo || {};
-    const promptSettings = settings?.promptSettings || {};
+    const personalInfo = currentProfile?.personalInfo || {};
+    const promptSettings = currentProfile?.promptSettings || {};
 
     let prompt = `${promptSettings.customPromptPrefix || ""}  
 
@@ -79,9 +138,9 @@ ${promptSettings.customPromptSuffix || ""}`;
   };
 
   const getApiKey = () => {
-    if (!settings?.apiKeys) return null;
+    if (!currentProfile?.apiKeys) return null;
 
-    const apiKeyObj = settings.apiKeys.find(
+    const apiKeyObj = currentProfile.apiKeys.find(
       (key) => key.provider === formData.llm_provider && key.isValid === true,
     );
 
@@ -206,10 +265,26 @@ ${promptSettings.customPromptSuffix || ""}`;
 
   return (
     <div className={className}>
-      <h1>Generate Proposal</h1>
+      <div className="page-header">
+        <h1>Generate Proposal</h1>
+        <div className="profile-selector-compact">
+          <select
+            value={currentProfileId || ""}
+            onChange={(e) => handleProfileChange(e.target.value)}
+            className="profile-select-dropdown"
+          >
+            {profiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       <div className="container">
         {!showResults ? (
           <div className="proposal-card">
+
             <form onSubmit={handleSubmit}>
               <div className="section">
                 <div className="form-group">
@@ -330,9 +405,15 @@ ${promptSettings.customPromptSuffix || ""}`;
                 </div>
               </div>
 
-              {!hasValidApiKey() && (
+              {!currentProfile && (
                 <div className="warning-message">
-                  ⚠️ No valid API key found for {formData.llm_provider}. You'll
+                  ⚠️ No profile selected. Please select a profile to continue.
+                </div>
+              )}
+
+              {currentProfile && !hasValidApiKey() && (
+                <div className="warning-message">
+                  ⚠️ No valid API key found for {formData.llm_provider} in the selected profile. You'll
                   get the prompt to use manually.
                 </div>
               )}
@@ -341,14 +422,16 @@ ${promptSettings.customPromptSuffix || ""}`;
                 <button
                   type="submit"
                   className="generate-btn"
-                  disabled={isGenerating}
+                  disabled={isGenerating || !currentProfile}
                 >
                   <span className="btn-text">
                     {isGenerating
                       ? "Generating..."
-                      : hasValidApiKey()
-                        ? "Generate Proposal"
-                        : "Generate Prompt"}
+                      : !currentProfile
+                        ? "Select Profile First"
+                        : hasValidApiKey()
+                          ? "Generate Proposal"
+                          : "Generate Prompt"}
                   </span>
                   <div className="btn-shine"></div>
                 </button>
@@ -424,6 +507,76 @@ export default styled(GenerateProposal)`
     position: relative;
     z-index: 1;
     padding: 0px 20px;
+  }
+
+  /* Page Header with Compact Profile Selector */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 0 20px;
+
+    h1 {
+      margin: 0;
+      font-size: 2.2rem;
+      color: #333;
+      font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15px;
+      padding: 0 15px;
+
+      h1 {
+        font-size: 1.8rem;
+      }
+    }
+  }
+
+  .profile-selector-compact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .profile-select-dropdown {
+    padding: 8px 16px;
+    border: 2px solid rgba(98, 150, 211, 0.3);
+    border-radius: 10px;
+    background: rgba(98, 150, 211, 0.05);
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 180px;
+
+    &:hover {
+      border-color: rgba(98, 150, 211, 0.5);
+      background: rgba(98, 150, 211, 0.08);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: rgba(98, 150, 211, 0.7);
+      background: rgba(98, 150, 211, 0.1);
+      box-shadow: 0 0 0 3px rgba(98, 150, 211, 0.1);
+    }
+
+    option {
+      background: #ffffff;
+      color: #333;
+      padding: 8px;
+      font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+      width: 100%;
+      min-width: unset;
+    }
   }
 
   .warning-message {
@@ -727,6 +880,8 @@ export default styled(GenerateProposal)`
     .section {
       margin-bottom: 40px;
     }
+
+
 
     .generate-btn {
       min-width: 200px;
