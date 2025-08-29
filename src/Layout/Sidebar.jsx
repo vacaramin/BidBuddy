@@ -215,6 +215,11 @@ export default styled(Sidebar)`
 
     .navItem span {
       flex: 1;
+      transition: transform 300ms ease-in-out;
+      &:hover{
+        color: #83c3ff;
+        transform: translate(3px, 0px);
+      }
     }
   }
 
