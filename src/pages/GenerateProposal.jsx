@@ -109,6 +109,7 @@ ${promptSettings.customPromptSuffix || ""}`;
 
     try {
       let response;
+      let proposalContent = "";
       const messages = [{ role: "user", content: prompt }];
 
       if (formData.llm_provider === "openai") {
@@ -117,9 +118,8 @@ ${promptSettings.customPromptSuffix || ""}`;
           messages,
           formData.llm_model,
         );
-        setGeneratedProposal(
-          response.choices[0]?.message?.content || "No response generated",
-        );
+        proposalContent =
+          response.choices[0]?.message?.content || "No response generated";
       } else if (formData.llm_provider === "anthropic") {
         // Convert messages format for Claude
         const claudeMessages = messages.map((msg) => ({
@@ -127,12 +127,12 @@ ${promptSettings.customPromptSuffix || ""}`;
           content: msg.content,
         }));
         response = await ApiService.callClaude(apiKey, claudeMessages);
-        setGeneratedProposal(
-          response.content[0]?.text || "No response generated",
-        );
+        proposalContent = response.content[0]?.text || "No response generated";
       }
 
-      // Save to history
+      setGeneratedProposal(proposalContent);
+
+      // Save to history - moved here so proposalContent is available
       const proposal = {
         id: Date.now().toString(),
         created_at: new Date().toISOString(),
@@ -141,23 +141,36 @@ ${promptSettings.customPromptSuffix || ""}`;
         llm_provider: formData.llm_provider,
         llm_model: formData.llm_model,
         prompt_used: prompt,
-        generated_proposal: generatedProposal,
+        generated_proposal: proposalContent, // Use the actual generated content
       };
 
       const existingProposals = getFromStorage(STORAGE_KEYS.PROPOSALS, []);
       saveToStorage(STORAGE_KEYS.PROPOSALS, [proposal, ...existingProposals]);
     } catch (error) {
       console.error("Error generating proposal:", error);
-      setGeneratedProposal(`Error generating proposal: ${error.message}`);
+      const errorMessage = `Error generating proposal: ${error.message}`;
+      setGeneratedProposal(errorMessage);
     } finally {
       setIsGenerating(false);
       setShowResults(true);
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Copied to clipboard!");
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      alert("Copied to clipboard!");
+    }
   };
 
   const resetForm = () => {
@@ -176,6 +189,13 @@ ${promptSettings.customPromptSuffix || ""}`;
   const hasValidApiKey = () => {
     return getApiKey() !== null;
   };
+  if(isGenerating){
+    return (
+    <div style={{display: "flex", justifyContent: "center", alignItems: "center", height: "100vh"}}>
+      <div class="loader"></div>
+      </div>
+      )
+  }
 
   return (
     <div className={className}>
@@ -222,7 +242,10 @@ ${promptSettings.customPromptSuffix || ""}`;
                           if (e.target.value === "openai") {
                             handleInputChange("llm_model", "gpt-4");
                           } else if (e.target.value === "anthropic") {
-                            handleInputChange("llm_model", "claude-3-sonnet");
+                            handleInputChange(
+                              "llm_model",
+                              "claude-3-sonnet-20240229",
+                            );
                           }
                         }}
                       >
@@ -249,17 +272,21 @@ ${promptSettings.customPromptSuffix || ""}`;
                             <option value="gpt-4">
                               🚀 GPT-4 (Recommended)
                             </option>
+                            <option value="gpt-4o">⚡ GPT-4o</option>
                             <option value="gpt-3.5-turbo">
-                              ⚡ GPT-3.5 Turbo
+                              💨 GPT-3.5 Turbo
                             </option>
                           </>
                         ) : (
                           <>
-                            <option value="claude-3-sonnet">
+                            <option value="claude-3-sonnet-20240229">
                               🧠 Claude 3 Sonnet
                             </option>
-                            <option value="claude-3-haiku">
+                            <option value="claude-3-haiku-20240307">
                               📝 Claude 3 Haiku
+                            </option>
+                            <option value="claude-3-opus-20240229">
+                              🎯 Claude 3 Opus
                             </option>
                           </>
                         )}
