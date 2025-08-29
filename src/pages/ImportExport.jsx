@@ -553,10 +553,6 @@ export default styled(ImportExport)`
   .header-section {
     margin-bottom: 40px;
 
-    h1 {
-      margin: 0 0 8px 0;
-    }
-
     p {
       padding: 0px 20px;
       color: #666;

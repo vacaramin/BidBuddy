@@ -22,6 +22,7 @@ const Topbar = ({ className }) => {
     "/proposal": "Generate Proposal",
     "/history": "History",
     "/settings": "Settings",
+    "/import-export": "Import & Export",
     "/": "",
   };
 
