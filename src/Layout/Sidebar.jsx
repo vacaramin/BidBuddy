@@ -101,6 +101,7 @@ export default styled(Sidebar)`
     top: 0;
     left: 0;
     height: 100vh;
+    flex: 0 0 var(--sidebarWidth);
     width: var(--sidebarWidth);
     color: white;
     display: flex;
@@ -227,8 +228,11 @@ export default styled(Sidebar)`
     background-color: #ffffff;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    min-height: 100vh;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    height: 100vh;
     color: var(--primaryTextColor);
   }
 
@@ -245,6 +249,8 @@ export default styled(Sidebar)`
 
   .content {
     flex: 1;
+    min-width: 0;
+    min-height: 0;
     padding: 0px 20px;
     overflow-y: auto;
   }

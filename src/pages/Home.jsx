@@ -1,6 +1,21 @@
 import { useState, useEffect } from "preact/hooks";
 import styled from "styled-components";
-import { getFromStorage, STORAGE_KEYS } from "../utils/localStorage";
+import { Link } from "preact-router";
+import {
+  Activity,
+  ChartColumn,
+  CircleCheck,
+  FileText,
+  PenLine,
+  Settings,
+  WholeWord,
+  X,
+} from "lucide-preact";
+import {
+  getFromStorage,
+  saveToStorage,
+  STORAGE_KEYS,
+} from "../utils/localStorage";
 import {
   LineChart,
   Line,
@@ -14,20 +29,50 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
+
+const tooltipStyle = {
+  backgroundColor: "#ffffff",
+  border: "1px solid rgba(0, 0, 0, 0.08)",
+  borderRadius: "10px",
+  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)",
+  fontSize: 13,
+};
+
+const StatCard = ({ title, value, subtitle, icon, color = "#6296d3" }) => (
+  <div className="stat-card">
+    <div className="stat-header">
+      <div
+        className="stat-icon"
+        style={{ backgroundColor: `${color}20`, color }}
+      >
+        {icon}
+      </div>
+      <div className="stat-info">
+        <h3>{value}</h3>
+        <p>{title}</p>
+        {subtitle && <span className="stat-subtitle">{subtitle}</span>}
+      </div>
+    </div>
+  </div>
+);
 
 const Home = ({ className }) => {
   const [proposals, setProposals] = useState([]);
-  const [settings, setSettings] = useState(null);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() =>
+    Boolean(getFromStorage(STORAGE_KEYS.WELCOME_DISMISSED, false)),
+  );
 
   useEffect(() => {
-    const savedProposals = getFromStorage(STORAGE_KEYS.PROPOSALS, []);
-    const savedSettings = getFromStorage(STORAGE_KEYS.SETTINGS);
-    setProposals(savedProposals);
-    setSettings(savedSettings);
+    setProposals(getFromStorage(STORAGE_KEYS.PROPOSALS, []));
   }, []);
 
-  // Calculate analytics data
+  const dismissWelcome = () => {
+    saveToStorage(STORAGE_KEYS.WELCOME_DISMISSED, true);
+    setWelcomeDismissed(true);
+  };
+
   const totalProposals = proposals.length;
   const successfulProposals = proposals.filter(
     (p) => p.generated_proposal,
@@ -38,16 +83,18 @@ const Home = ({ className }) => {
     );
   }, 0);
   const avgWordsPerProposal =
-    totalProposals > 0 ? Math.round(totalWords / successfulProposals) : 0;
+    successfulProposals > 0 ? Math.round(totalWords / successfulProposals) : 0;
+  const successRate =
+    totalProposals > 0
+      ? Math.round((successfulProposals / totalProposals) * 100)
+      : 0;
 
-  // Recent activity (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const recentProposals = proposals.filter(
     (p) => new Date(p.created_at) > thirtyDaysAgo,
   );
 
-  // Provider usage distribution
   const providerStats = proposals.reduce((acc, p) => {
     acc[p.llm_provider] = (acc[p.llm_provider] || 0) + 1;
     return acc;
@@ -61,7 +108,6 @@ const Home = ({ className }) => {
     }),
   );
 
-  // Weekly activity data
   const getWeeklyData = () => {
     const weeks = [];
     const now = new Date();
@@ -81,7 +127,10 @@ const Home = ({ className }) => {
       });
 
       weeks.push({
-        week: `Week ${i === 0 ? "Current" : i === 1 ? "Last" : `-${i}`}`,
+        week: weekStart.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
         proposals: weekProposals.length,
         successful: weekProposals.filter((p) => p.generated_proposal).length,
       });
@@ -92,7 +141,6 @@ const Home = ({ className }) => {
 
   const weeklyData = getWeeklyData();
 
-  // Model usage stats
   const modelStats = proposals.reduce((acc, p) => {
     acc[p.llm_model] = (acc[p.llm_model] || 0) + 1;
     return acc;
@@ -103,482 +151,611 @@ const Home = ({ className }) => {
     count,
   }));
 
-  const StatCard = ({ title, value, subtitle, icon, color = "#6296d3" }) => (
-    <div className="stat-card">
-      <div className="stat-header">
-        <div
-          className="stat-icon"
-          style={{ backgroundColor: `${color}20`, color }}
-        >
-          {icon}
-        </div>
-        <div className="stat-info">
-          <h3>{value}</h3>
-          <p>{title}</p>
-          {subtitle && <span className="stat-subtitle">{subtitle}</span>}
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className={className}>
-      <div className="dashboard-header">
-        <h1>Dashboard Overview</h1>
-        <p>Track your proposal generation analytics and performance</p>
-      </div>
+      {!welcomeDismissed && (
+        <section className="getting-started">
+          <div className="getting-started-top">
+            <div className="getting-started-copy">
+              <h2>Welcome to BidBuddy</h2>
+              <p>
+                Start by generating your first proposal to see analytics and
+                insights here.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="welcome-close"
+              onClick={dismissWelcome}
+              aria-label="Dismiss welcome"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="getting-started-steps">
+            <Link href="/settings" className="step">
+              <div className="step-number">1</div>
+              <div className="step-content">
+                <h3>Configure settings</h3>
+                <p>Add your profile and API keys.</p>
+              </div>
+            </Link>
+            <Link href="/proposal" className="step">
+              <div className="step-number">2</div>
+              <div className="step-content">
+                <h3>Generate a proposal</h3>
+                <p>Create your first AI-written bid.</p>
+              </div>
+            </Link>
+            <Link href="/history" className="step">
+              <div className="step-number">3</div>
+              <div className="step-content">
+                <h3>Review history</h3>
+                <p>Open past proposals any time.</p>
+              </div>
+            </Link>
+          </div>
+        </section>
+      )}
 
-      <div className="stats-grid">
+      <header className="page-header">
+        <div className="page-heading">
+          <h1>Dashboard</h1>
+          <p>Track proposal volume, success rate, and which models you use.</p>
+        </div>
+        <Link href="/proposal" className="header-action">
+          <PenLine size={16} />
+          <span>New proposal</span>
+        </Link>
+      </header>
+
+      <section className="stats-grid" aria-label="Proposal summary">
         <StatCard
-          title="Total Proposals"
+          title="Total proposals"
           value={totalProposals}
           subtitle="All time"
-          icon="📝"
+          icon={<FileText size={20} />}
           color="#10b981"
         />
         <StatCard
-          title="Successful Generations"
+          title="Successful generations"
           value={successfulProposals}
-          subtitle={`${totalProposals > 0 ? Math.round((successfulProposals / totalProposals) * 100) : 0}% success rate`}
-          icon="✅"
+          subtitle={`${successRate}% success rate`}
+          icon={<CircleCheck size={20} />}
           color="#3b82f6"
         />
         <StatCard
-          title="Recent Activity"
+          title="Recent activity"
           value={recentProposals.length}
           subtitle="Last 30 days"
-          icon="📊"
+          icon={<Activity size={20} />}
           color="#f59e0b"
         />
         <StatCard
-          title="Average Words"
-          value={avgWordsPerProposal || "N/A"}
-          subtitle="Per proposal"
-          icon="📄"
+          title="Average words"
+          value={avgWordsPerProposal}
+          subtitle="Per successful proposal"
+          icon={<WholeWord size={20} />}
           color="#ef4444"
         />
-      </div>
+      </section>
 
-      <div className="charts-grid">
-        <div className="chart-card">
+      <section className="charts-grid" aria-label="Proposal analytics">
+        <article className="chart-card">
           <div className="chart-header">
-            <h3>Weekly Activity</h3>
-            <p>Proposals generated over time</p>
+            <h2>Weekly activity</h2>
+            <p>Proposals started each week</p>
           </div>
           <div className="chart-container">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="week" stroke="#666" fontSize={12} />
-                <YAxis stroke="#666" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "2px solid #f0f0f0",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                  }}
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={weeklyData}
+                margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#eef0f3" />
+                <XAxis
+                  dataKey="week"
+                  stroke="#98a2b3"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
                 />
+                <YAxis
+                  stroke="#98a2b3"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                  width={36}
+                />
+                <Tooltip contentStyle={tooltipStyle} />
                 <Line
                   type="monotone"
                   dataKey="proposals"
                   stroke="#6296d3"
-                  strokeWidth={3}
-                  dot={{ fill: "#6296d3", strokeWidth: 2, r: 6 }}
-                  activeDot={{ r: 8, stroke: "#6296d3", strokeWidth: 2 }}
+                  strokeWidth={2.5}
+                  dot={{ fill: "#6296d3", strokeWidth: 0, r: 4 }}
+                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </article>
 
-        <div className="chart-card">
+        <article className="chart-card">
           <div className="chart-header">
-            <h3>AI Provider Usage</h3>
-            <p>Distribution by provider</p>
+            <h2>AI provider usage</h2>
+            <p>Share of proposals by provider</p>
           </div>
           <div className="chart-container">
             {providerData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={providerData}
                     cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
+                    cy="46%"
+                    innerRadius={54}
+                    outerRadius={78}
+                    paddingAngle={3}
                     dataKey="value"
+                    stroke="none"
                   >
                     {providerData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: 13, color: "#4b5563" }}
+                  />
+                  <Tooltip contentStyle={tooltipStyle} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
               <div className="empty-chart">
-                <p>No data available</p>
-                <span>Generate some proposals to see analytics</span>
+                <ChartColumn size={28} />
+                <p>No provider data yet</p>
+                <span>Generations will be grouped here.</span>
               </div>
             )}
           </div>
-        </div>
+        </article>
 
-        <div className="chart-card full-width">
+        <article className="chart-card span-2">
           <div className="chart-header">
-            <h3>Model Performance</h3>
-            <p>Usage by AI model</p>
+            <h2>Model usage</h2>
+            <p>How often each model is selected</p>
           </div>
           <div className="chart-container">
             {modelData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={modelData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="model" stroke="#666" fontSize={12} />
-                  <YAxis stroke="#666" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "white",
-                      border: "2px solid #f0f0f0",
-                      borderRadius: "8px",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                    }}
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eef0f3" />
+                  <XAxis
+                    dataKey="model"
+                    stroke="#98a2b3"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    interval={0}
+                    tickFormatter={(value) =>
+                      value.length > 18 ? `${value.slice(0, 16)}…` : value
+                    }
                   />
-                  <Bar dataKey="count" fill="#6296d3" radius={[4, 4, 0, 0]} />
+                  <YAxis
+                    stroke="#98a2b3"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                    width={36}
+                  />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="count" fill="#6296d3" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="empty-chart">
-                <p>No model data available</p>
-                <span>Generate proposals to see model usage</span>
+                <Settings size={28} />
+                <p>No model data yet</p>
+                <span>Model choices will show up here.</span>
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {totalProposals === 0 && (
-        <div className="getting-started">
-          <div className="getting-started-content">
-            <h2>Welcome to BidBuddy!</h2>
-            <p>
-              Start by generating your first proposal to see analytics and
-              insights here.
-            </p>
-            <div className="getting-started-steps">
-              <div className="step">
-                <div className="step-number">1</div>
-                <div className="step-content">
-                  <h4>Configure Settings</h4>
-                  <p>Add your personal info and API keys</p>
-                </div>
-              </div>
-              <div className="step">
-                <div className="step-number">2</div>
-                <div className="step-content">
-                  <h4>Generate Proposal</h4>
-                  <p>Create your first AI-powered proposal</p>
-                </div>
-              </div>
-              <div className="step">
-                <div className="step-number">3</div>
-                <div className="step-content">
-                  <h4>Track Progress</h4>
-                  <p>Monitor your analytics and success</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        </article>
+      </section>
     </div>
   );
 };
 
 export default styled(Home)`
-  min-height: calc(100vh - var(--topBarHeight));
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 0 40px;
   background: #ffffff;
 
-  .dashboard-header {
-    margin-bottom: 40px;
+  &,
+  & * {
+    box-sizing: border-box;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px 24px;
+  }
+
+  .page-heading {
+    min-width: 0;
+
+    h1 {
+      margin: 0;
+      color: #1c1c1c;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
 
     p {
-      padding: 0px 20px;
-      color: #666;
-      font-size: 1.1rem;
+      margin: 6px 0 0;
+      padding: 0;
+      max-width: 40rem;
+      color: #667085;
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+  }
+
+  .header-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    background: #6296d3;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+
+    &:hover {
+      background: #3969a0;
+    }
+  }
+
+  .getting-started {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    border: 2px solid rgba(98, 150, 211, 0.22);
+    border-radius: 16px;
+    background: linear-gradient(
+      135deg,
+      rgba(98, 150, 211, 0.12) 0%,
+      rgba(123, 177, 241, 0.05) 100%
+    );
+  }
+
+  .getting-started-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .welcome-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(98, 150, 211, 0.35);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4b5563;
+    cursor: pointer;
+
+    &:hover {
+      background: #f3f6fb;
+      color: #1c1c1c;
+    }
+  }
+
+  .getting-started-copy {
+    h2 {
       margin: 0;
+      color: #1c1c1c;
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    p {
+      margin: 6px 0 0;
+      max-width: 42rem;
+      color: #4b5563;
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+  }
+
+  .getting-started-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+    height: 100%;
+    padding: 16px;
+    border: 1px solid rgba(98, 150, 211, 0.2);
+    border-radius: 12px;
+    background: #ffffff;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      border-color: rgba(98, 150, 211, 0.55);
+    }
+
+    .step-number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: #6296d3;
+      color: #ffffff;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .step-content {
+      min-width: 0;
+
+      h3 {
+        margin: 0;
+        color: #1c1c1c;
+        font-size: 0.98rem;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+
+      p {
+        margin: 4px 0 0;
+        color: #667085;
+        font-size: 0.88rem;
+        line-height: 1.45;
+      }
     }
   }
 
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
-    margin-bottom: 40px;
-
-    padding: 0px 20px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
   }
 
   .stat-card {
-    background: rgba(0, 0, 0, 0.02);
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    min-height: 112px;
+    padding: 18px 20px;
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 16px;
-    padding: 24px;
-    transition: all 0.3s ease;
+    background: rgba(0, 0, 0, 0.02);
 
     &:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
-      border-color: rgba(0, 0, 0, 0.15);
+      border-color: rgba(98, 150, 211, 0.45);
+      box-shadow: 0 8px 24px rgba(19, 52, 90, 0.06);
     }
 
     .stat-header {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
+      width: 100%;
+      min-width: 0;
     }
 
     .stat-icon {
-      width: 60px;
-      height: 60px;
-      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
-      font-weight: 600;
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      border-radius: 12px;
     }
 
     .stat-info {
-      flex: 1;
+      min-width: 0;
 
       h3 {
-        font-size: 2.2rem;
+        margin: 0;
+        color: #1c1c1c;
+        font-size: 1.6rem;
         font-weight: 700;
-        margin: 0 0 4px 0;
-        color: #333;
+        line-height: 1.1;
       }
 
       p {
-        font-size: 1rem;
+        margin: 4px 0 0;
+        color: #374151;
+        font-size: 0.92rem;
         font-weight: 600;
-        color: #666;
-        margin: 0 0 4px 0;
+        line-height: 1.3;
       }
 
       .stat-subtitle {
-        font-size: 0.85rem;
-        color: #888;
+        display: block;
+        margin-top: 2px;
+        color: #6b7280;
+        font-size: 0.8rem;
         font-weight: 500;
+        line-height: 1.35;
       }
     }
   }
 
   .charts-grid {
-    padding: 0px 20px;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 40px;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 16px;
+    margin: 0;
+    padding: 0;
 
-    .full-width {
+    .span-2 {
       grid-column: 1 / -1;
-    }
-
-    @media (max-width: 1024px) {
-      grid-template-columns: 1fr;
-
-      .full-width {
-        grid-column: 1;
-      }
     }
   }
 
   .chart-card {
-    background: rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 20px;
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 16px;
-    padding: 24px;
-    transition: all 0.3s ease;
+    background: rgba(0, 0, 0, 0.02);
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-      border-color: rgba(0, 0, 0, 0.15);
+      border-color: rgba(98, 150, 211, 0.45);
+      box-shadow: 0 8px 24px rgba(19, 52, 90, 0.06);
     }
 
     .chart-header {
-      margin-bottom: 24px;
+      margin-bottom: 8px;
 
-      h3 {
-        font-size: 1.3rem;
+      h2 {
+        margin: 0;
+        color: #1c1c1c;
+        font-size: 1.05rem;
         font-weight: 700;
-        color: #333;
-        margin: 0 0 4px 0;
+        line-height: 1.3;
       }
 
       p {
-        font-size: 0.9rem;
-        color: #666;
-        margin: 0;
+        margin: 4px 0 0;
+        padding: 0;
+        color: #667085;
+        font-size: 0.85rem;
+        line-height: 1.4;
       }
     }
 
     .chart-container {
-      position: relative;
+      width: 100%;
+      min-width: 0;
+      height: 280px;
     }
 
     .empty-chart {
-      height: 300px;
+      height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      color: #888;
+      gap: 6px;
+      color: #98a2b3;
+      text-align: center;
 
       p {
-        font-size: 1.1rem;
+        margin: 4px 0 0;
+        color: #4b5563;
+        font-size: 0.95rem;
         font-weight: 600;
-        margin: 0 0 8px 0;
       }
 
       span {
-        font-size: 0.9rem;
+        max-width: 16rem;
+        color: #98a2b3;
+        font-size: 0.85rem;
+        line-height: 1.4;
       }
     }
   }
 
-  .getting-started {
-    background: linear-gradient(
-      135deg,
-      rgba(98, 150, 211, 0.1) 0%,
-      rgba(123, 177, 241, 0.05) 100%
-    );
-    text-align: center;
+  @media (max-width: 1100px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
 
-    .getting-started-content {
-      padding: 0px 20px;
-      max-width: 600px;
-      margin: 0 auto;
+  @media (max-width: 980px) {
+    .charts-grid {
+      grid-template-columns: 1fr;
 
-      h2 {
-        color: #333;
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 12px;
-      }
-
-      > p {
-        color: #666;
-        font-size: 1.1rem;
-        margin-bottom: 40px;
+      .span-2 {
+        grid-column: auto;
       }
     }
 
     .getting-started-steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 30px;
-      text-align: left;
-
-      .step {
-        display: flex;
-        align-items: flex-start;
-        gap: 16px;
-
-        .step-number {
-          width: 40px;
-          height: 40px;
-          background: #6296d3;
-          color: white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 700;
-          font-size: 1.1rem;
-          flex-shrink: 0;
-        }
-
-        .step-content {
-          h4 {
-            color: #333;
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin: 0 0 8px 0;
-          }
-
-          p {
-            color: #666;
-            font-size: 0.95rem;
-            margin: 0;
-            line-height: 1.5;
-          }
-        }
-      }
+      grid-template-columns: 1fr;
     }
   }
 
-  @media (max-width: 768px) {
-    padding: 20px 15px;
+  @media (max-width: 767px) {
+    gap: 20px;
+    padding: 4px 0 28px;
+  }
 
-    .dashboard-header {
-      h1 {
-        font-size: 2rem;
-      }
+  @media (max-width: 640px) {
+    .page-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
 
-      p {
-        font-size: 1rem;
-      }
+    .header-action {
+      align-self: flex-start;
     }
 
     .stats-grid {
       grid-template-columns: 1fr;
-      gap: 16px;
     }
 
-    .charts-grid {
-      gap: 16px;
+    .page-heading h1 {
+      font-size: 1.5rem;
     }
 
-    .getting-started {
-      padding: 30px 20px;
-
-      .getting-started-steps {
-        gap: 24px;
-      }
-    }
-  }
-
-  @media (max-width: 480px) {
-    .chart-card {
-      padding: 20px;
-    }
-
+    .getting-started,
+    .chart-card,
     .stat-card {
-      padding: 20px;
-
-      .stat-header {
-        gap: 12px;
-      }
-
-      .stat-icon {
-        width: 50px;
-        height: 50px;
-        font-size: 1.3rem;
-      }
-
-      .stat-info h3 {
-        font-size: 1.8rem;
-      }
+      padding: 16px;
     }
   }
 `;

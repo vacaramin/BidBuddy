@@ -19,9 +19,19 @@ const Logo = ({ className }) => {
 export default styled(Logo)`
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 10px;
+  min-width: 0;
 
   .logo {
     object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
   }
 `;
