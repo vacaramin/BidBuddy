@@ -6,11 +6,13 @@ import {
   STORAGE_KEYS,
 } from "../utils/localStorage";
 import { ApiService } from "../utils/apiService";
+import { getDefaultModel, getModels, PROVIDERS } from "../utils/models";
+import ProviderLogo from "../components/ProviderLogo";
 
 const GenerateProposal = ({ className }) => {
   const [formData, setFormData] = useState({
     project_description: "",
-    llm_model: "gpt-4",
+    llm_model: getDefaultModel("openai"),
     llm_provider: "openai",
     additional_notes: "",
   });
@@ -126,7 +128,11 @@ ${promptSettings.customPromptSuffix || ""}`;
           role: msg.role,
           content: msg.content,
         }));
-        response = await ApiService.callClaude(apiKey, claudeMessages);
+        response = await ApiService.callClaude(
+          apiKey,
+          claudeMessages,
+          formData.llm_model,
+        );
         proposalContent = response.content[0]?.text || "No response generated";
       }
 
@@ -176,7 +182,7 @@ ${promptSettings.customPromptSuffix || ""}`;
   const resetForm = () => {
     setFormData({
       project_description: "",
-      llm_model: "gpt-4",
+      llm_model: getDefaultModel("openai"),
       llm_provider: "openai",
       additional_notes: "",
     });
@@ -238,34 +244,42 @@ ${promptSettings.customPromptSuffix || ""}`;
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="llm_provider">AI Provider *</label>
-                    <div className="input-wrapper">
-                      <select
-                        id="llm_provider"
-                        value={formData.llm_provider}
-                        onChange={(e) => {
-                          handleInputChange("llm_provider", e.target.value);
-                          // Reset model when provider changes
-                          if (e.target.value === "openai") {
-                            handleInputChange("llm_model", "gpt-4");
-                          } else if (e.target.value === "anthropic") {
+                    <label id="llm_provider-label">AI Provider *</label>
+                    <div
+                      className="provider-choices"
+                      role="radiogroup"
+                      aria-labelledby="llm_provider-label"
+                    >
+                      {PROVIDERS.map((provider) => (
+                        <button
+                          key={provider.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={formData.llm_provider === provider.id}
+                          className={`provider-choice ${
+                            formData.llm_provider === provider.id
+                              ? "active"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            handleInputChange("llm_provider", provider.id);
                             handleInputChange(
                               "llm_model",
-                              "claude-3-sonnet-20240229",
+                              provider.defaultModel,
                             );
-                          }
-                        }}
-                      >
-                        <option value="openai">🤖 OpenAI</option>
-                        <option value="anthropic">🧠 Anthropic (Claude)</option>
-                      </select>
-                      <div className="input-border"></div>
+                          }}
+                        >
+                          <ProviderLogo provider={provider.id} />
+                          <span>{provider.name}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
                   <div className="form-group">
                     <label htmlFor="llm_model">AI Model *</label>
-                    <div className="input-wrapper">
+                    <div className="input-wrapper model-field">
+                      <ProviderLogo provider={formData.llm_provider} />
                       <select
                         id="llm_model"
                         value={formData.llm_model}
@@ -274,29 +288,12 @@ ${promptSettings.customPromptSuffix || ""}`;
                         }
                         className={errors.llm_model ? "error" : ""}
                       >
-                        {formData.llm_provider === "openai" ? (
-                          <>
-                            <option value="gpt-4">
-                              🚀 GPT-4 (Recommended)
-                            </option>
-                            <option value="gpt-4o">⚡ GPT-4o</option>
-                            <option value="gpt-3.5-turbo">
-                              💨 GPT-3.5 Turbo
-                            </option>
-                          </>
-                        ) : (
-                          <>
-                            <option value="claude-3-sonnet-20240229">
-                              🧠 Claude 3 Sonnet
-                            </option>
-                            <option value="claude-3-haiku-20240307">
-                              📝 Claude 3 Haiku
-                            </option>
-                            <option value="claude-3-opus-20240229">
-                              🎯 Claude 3 Opus
-                            </option>
-                          </>
-                        )}
+                        {getModels(formData.llm_provider).map((model) => (
+                          <option key={model.id} value={model.id}>
+                            {model.name}
+                            {model.note ? ` — ${model.note}` : ""}
+                          </option>
+                        ))}
                       </select>
                       <div className="input-border"></div>
                     </div>
@@ -535,6 +532,76 @@ export default styled(GenerateProposal)`
       background: #ffffff;
       color: #333;
       padding: 12px;
+    }
+  }
+
+  .provider-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .provider-choice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 54px;
+    padding: 10px 12px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.02);
+    color: #333;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+
+    img {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+    }
+
+    &.active {
+      border-color: #5486c0;
+      background: rgba(84, 134, 192, 0.1);
+    }
+  }
+
+  .model-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding-left: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.02);
+    box-sizing: border-box;
+
+    img {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      object-fit: contain;
+    }
+
+    select {
+      flex: 1;
+      min-width: 0;
+      width: auto;
+      border: none;
+      background: transparent;
+      padding-left: 0;
+      transform: none;
+
+      &:hover,
+      &:focus {
+        border: none;
+        background: transparent;
+        transform: none;
+      }
     }
   }
 

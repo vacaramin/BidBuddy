@@ -1,5 +1,5 @@
 export class ApiService {
-  static async callOpenAI(apiKey, messages, model = "gpt-4") {
+  static async callOpenAI(apiKey, messages, model = "gpt-6.1-sol") {
     try {
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -12,8 +12,7 @@ export class ApiService {
           body: JSON.stringify({
             model,
             messages,
-            max_tokens: 2000,
-            temperature: 0.7,
+            max_completion_tokens: 4000,
           }),
         },
       );
@@ -32,11 +31,7 @@ export class ApiService {
     }
   }
 
-  static async callClaude(
-    apiKey,
-    messages,
-    model = "claude-3-sonnet-20240229",
-  ) {
+  static async callClaude(apiKey, messages, model = "claude-sonnet-5-5") {
     try {
       console.log("Claude API - Raw messages:", messages);
 
@@ -66,7 +61,7 @@ export class ApiService {
 
       const requestBody = {
         model,
-        max_tokens: 2000,
+        max_tokens: 4000,
         messages: formattedMessages,
       };
 

@@ -5,6 +5,8 @@ import {
   saveToStorage,
   STORAGE_KEYS,
 } from "../utils/localStorage";
+import { getProvider } from "../utils/models";
+import ProviderLogo from "../components/ProviderLogo";
 
 const History = ({ className }) => {
   const [proposals, setProposals] = useState([]);
@@ -72,9 +74,7 @@ const History = ({ className }) => {
       }
     });
 
-  const getProviderIcon = (provider) => {
-    return provider === "openai" ? "🤖" : "🧠";
-  };
+  const getProviderName = (provider) => getProvider(provider)?.name || provider;
 
   const getStatusBadge = (proposal) => {
     if (proposal.generated_proposal) {
@@ -176,8 +176,11 @@ const History = ({ className }) => {
                     <div className="proposal-badges">
                       {getStatusBadge(proposal)}
                       <span className="proposal-provider">
-                        {getProviderIcon(proposal.llm_provider)}{" "}
-                        {proposal.llm_provider}
+                        <ProviderLogo
+                          provider={proposal.llm_provider}
+                          size={14}
+                        />
+                        {getProviderName(proposal.llm_provider)}
                       </span>
                     </div>
                   </div>
@@ -210,8 +213,11 @@ const History = ({ className }) => {
                       </span>
                       <span className="separator">•</span>
                       <span>
-                        {getProviderIcon(selectedProposal.llm_provider)}{" "}
-                        {selectedProposal.llm_provider}
+                        <ProviderLogo
+                          provider={selectedProposal.llm_provider}
+                          size={14}
+                        />
+                        {getProviderName(selectedProposal.llm_provider)}
                       </span>
                       <span className="separator">•</span>
                       <span>{selectedProposal.llm_model.toUpperCase()}</span>
@@ -538,13 +544,21 @@ export default styled(History)`
     }
 
     .proposal-provider {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       background: rgba(0, 0, 0, 0.1);
       padding: 4px 8px;
       border-radius: 12px;
       font-size: 0.7rem;
       font-weight: 600;
       color: #333;
-      text-transform: uppercase;
+
+      img {
+        width: 14px;
+        height: 14px;
+        object-fit: contain;
+      }
     }
 
     .proposal-description {
@@ -625,6 +639,14 @@ export default styled(History)`
 
           .separator {
             color: #ccc;
+          }
+
+          img {
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+            vertical-align: -2px;
+            object-fit: contain;
           }
         }
       }
