@@ -1,6 +1,16 @@
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
-import { KeyRound, PenLine, Trash2, User, X } from "lucide-preact";
+import {
+  Check,
+  KeyRound,
+  Mail,
+  PenLine,
+  Phone,
+  Trash2,
+  User,
+  X,
+} from "lucide-preact";
+import { getCurrentUrl, route, useRouter } from "preact-router";
 import {
   getFromStorage,
   saveToStorage,
@@ -9,6 +19,19 @@ import {
 import { PROVIDERS } from "../utils/models";
 import ProviderLogo from "../components/ProviderLogo";
 import { Toast, useToast } from "../components/Toast";
+
+const SETTINGS_TABS = ["personal", "api", "prompts"];
+
+const tabFromUrl = (url = getCurrentUrl()) => {
+  const query = (url.split("?")[1] || "").split("#")[0];
+  const tab = new URLSearchParams(query).get("tab");
+  if (tab === "profile") return "personal";
+  if (tab === "prompt") return "prompts";
+  return SETTINGS_TABS.includes(tab) ? tab : "personal";
+};
+
+const settingsPathForTab = (tab) =>
+  tab === "personal" ? "/settings" : `/settings?tab=${tab}`;
 
 const emptyPersonalInfo = {
   name: "",
@@ -23,10 +46,13 @@ const emptyPromptSettings = {
   customPromptPrefix: "",
   customPromptSuffix: "",
   maxWords: 500,
+  includeEmail: false,
+  includePhone: false,
 };
 
 const normalizeSettings = (saved) => {
   const storedKeys = Array.isArray(saved?.apiKeys) ? saved.apiKeys : [];
+  const storedPrompt = saved?.promptSettings || {};
   return {
     personalInfo: {
       ...emptyPersonalInfo,
@@ -34,7 +60,9 @@ const normalizeSettings = (saved) => {
     },
     promptSettings: {
       ...emptyPromptSettings,
-      ...(saved?.promptSettings || {}),
+      ...storedPrompt,
+      includeEmail: storedPrompt.includeEmail === true,
+      includePhone: storedPrompt.includePhone === true,
     },
     apiKeys: PROVIDERS.map((provider) => {
       const found = storedKeys.find((key) => key.provider === provider.id);
@@ -83,12 +111,18 @@ const Settings = ({ className }) => {
   const [keyEditor, setKeyEditor] = useState(null);
   const [keyDraft, setKeyDraft] = useState("");
   const [keyError, setKeyError] = useState("");
-  const [activeTab, setActiveTab] = useState("personal");
+  const [router] = useRouter();
+  const activeTab = tabFromUrl(router?.url || getCurrentUrl());
   const { toast, showToast } = useToast();
 
   useEffect(() => {
     setSettings(normalizeSettings(getFromStorage(STORAGE_KEYS.SETTINGS, null)));
   }, []);
+
+  const setActiveTab = (tab) => {
+    const next = SETTINGS_TABS.includes(tab) ? tab : "personal";
+    route(settingsPathForTab(next), true);
+  };
 
   const persist = (next) => {
     const normalized = normalizeSettings(next);
@@ -431,6 +465,63 @@ const Settings = ({ className }) => {
             }
           />
         </label>
+
+        <div className="include-block">
+          <span className="include-label">
+            Include contact details
+            <small>Leave off unless the job asks for them</small>
+          </span>
+          <div className="include-row">
+            <button
+              type="button"
+              className={`include-chip${
+                settings.promptSettings.includeEmail ? " on" : ""
+              }`}
+              aria-pressed={settings.promptSettings.includeEmail}
+              onClick={() =>
+                handlePromptSettingChange(
+                  "includeEmail",
+                  !settings.promptSettings.includeEmail,
+                )
+              }
+            >
+              <span
+                className={`include-check${
+                  settings.promptSettings.includeEmail ? " checked" : ""
+                }`}
+                aria-hidden="true"
+              >
+                {settings.promptSettings.includeEmail && <Check size={12} />}
+              </span>
+              <Mail size={14} />
+              Email
+            </button>
+            <button
+              type="button"
+              className={`include-chip${
+                settings.promptSettings.includePhone ? " on" : ""
+              }`}
+              aria-pressed={settings.promptSettings.includePhone}
+              onClick={() =>
+                handlePromptSettingChange(
+                  "includePhone",
+                  !settings.promptSettings.includePhone,
+                )
+              }
+            >
+              <span
+                className={`include-check${
+                  settings.promptSettings.includePhone ? " checked" : ""
+                }`}
+                aria-hidden="true"
+              >
+                {settings.promptSettings.includePhone && <Check size={12} />}
+              </span>
+              <Phone size={14} />
+              Phone
+            </button>
+          </div>
+        </div>
       </section>
       )}
 
@@ -652,6 +743,78 @@ export default styled(Settings)`
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px 16px;
+  }
+
+  .include-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .include-label {
+    color: #1c1c1c;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.3;
+
+    small {
+      display: block;
+      margin-top: 2px;
+      color: #667085;
+      font-size: 0.8rem;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+  }
+
+  .include-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .include-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid #e6e8ec;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #667085;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      background: #f7fafd;
+    }
+
+    &.on {
+      border-color: rgba(98, 150, 211, 0.45);
+      background: rgba(98, 150, 211, 0.1);
+      color: #3969a0;
+    }
+  }
+
+  .include-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #ffffff;
+
+    &.checked {
+      border-color: #6296d3;
+      background: #6296d3;
+    }
   }
 
   .field {

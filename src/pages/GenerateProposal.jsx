@@ -330,6 +330,20 @@ Do not add a title, heading, or labeled sections such as "Deadline" or "Budget".
 Weave any of the following facts into the prose only when instructed:
 
 ${weaveLines.join("\n")}
+${
+  promptSettings.includeEmail
+    ? personalInfo.email
+      ? `- You may include this email: ${personalInfo.email}`
+      : ""
+    : "- Do not include any email address."
+}
+${
+  promptSettings.includePhone
+    ? personalInfo.phone
+      ? `- You may include this phone number: ${personalInfo.phone}`
+      : ""
+    : "- Do not include any phone number."
+}
 
 ${personalInfo.name ? `My name is ${personalInfo.name}.` : ""}
 ${personalInfo.portfolioUrl ? `Portfolio: ${personalInfo.portfolioUrl}` : ""}
@@ -400,11 +414,14 @@ ${promptSettings.customPromptSuffix || ""}`;
       portfolioUrl: "",
       ...(current.personalInfo || {}),
     };
+    const storedPrompt = current.promptSettings || {};
     const promptSettings = {
       customPromptPrefix: "",
       customPromptSuffix: "",
       maxWords: 500,
-      ...(current.promptSettings || {}),
+      ...storedPrompt,
+      includeEmail: storedPrompt.includeEmail === true,
+      includePhone: storedPrompt.includePhone === true,
     };
     const apiKeys = Array.isArray(current.apiKeys) ? [...current.apiKeys] : [];
     const index = apiKeys.findIndex((key) => key.provider === provider.id);
