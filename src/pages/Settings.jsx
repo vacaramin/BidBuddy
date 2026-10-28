@@ -211,7 +211,6 @@ const Settings = ({ className }) => {
 
   return (
     <div className={className}>
-      <h1>Settings</h1>
       <div className="container">
         <div className="content-area">
           {successMessage && (
@@ -529,7 +528,7 @@ export default styled(Settings)`
 
   .container {
     position: relative;
-    padding: 0px 20px;
+    padding: 24px 20px 0;
   }
 
   .content-area {

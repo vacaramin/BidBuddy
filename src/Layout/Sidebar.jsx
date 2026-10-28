@@ -251,7 +251,7 @@ export default styled(Sidebar)`
     flex: 1;
     min-width: 0;
     min-height: 0;
-    padding: 0px 20px;
+    padding: 20px 20px 0;
     overflow-y: auto;
   }
 
@@ -297,7 +297,7 @@ export default styled(Sidebar)`
     }
 
     .content {
-      padding: 20px 16px;
+      padding: 32px 16px 20px;
     }
   }
 
@@ -309,7 +309,7 @@ export default styled(Sidebar)`
     }
 
     .content {
-      padding: 16px 12px;
+      padding: 32px 12px 16px;
     }
 
     .topSection {

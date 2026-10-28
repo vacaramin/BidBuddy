@@ -6,6 +6,7 @@ export const PROVIDERS = [
     id: "openai",
     name: "ChatGPT",
     logo: openaiLogo,
+    keyUrl: "https://platform.openai.com/api-keys",
     defaultModel: "gpt-6.1-sol",
     models: [
       { id: "gpt-6.1-sol", name: "GPT-6.1 Sol", note: "Recommended" },
@@ -18,6 +19,7 @@ export const PROVIDERS = [
     id: "anthropic",
     name: "Claude",
     logo: claudeLogo,
+    keyUrl: "https://platform.claude.com/settings/keys",
     defaultModel: "claude-sonnet-5-5",
     models: [
       {

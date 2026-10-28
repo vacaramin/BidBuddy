@@ -86,7 +86,6 @@ const History = ({ className }) => {
   return (
     <div className={className}>
       <div className="header-section">
-        <h1>Proposal History</h1>
         <p>View and manage all your generated proposals</p>
       </div>
 
@@ -304,10 +303,10 @@ export default styled(History)`
   box-sizing: border-box;
 
   .header-section {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
+    padding-top: 10px;
 
     p {
-      padding: 0px 20px;
       color: #666;
       margin: 0;
       font-size: 1.1rem;
@@ -772,10 +771,6 @@ export default styled(History)`
           flex: 1;
         }
       }
-    }
-
-    .header-section h1 {
-      font-size: 1.8rem;
     }
 
     .history-container {

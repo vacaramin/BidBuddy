@@ -265,7 +265,6 @@ const ImportExport = ({ className }) => {
   return (
     <div className={className}>
       <div className="header-section">
-        <h1>Import & Export</h1>
         <p>
           Backup your configurations and data or restore from a previous backup
         </p>
@@ -551,7 +550,8 @@ export default styled(ImportExport)`
   box-sizing: border-box;
 
   .header-section {
-    margin-bottom: 40px;
+    margin-bottom: 20px;
+    padding-top: 10px;
 
     p {
       padding: 0px 20px;
@@ -1143,7 +1143,6 @@ export default styled(ImportExport)`
 
   @media (max-width: 480px) {
     .header-section p {
-      padding: 0 15px;
     }
 
     .message {

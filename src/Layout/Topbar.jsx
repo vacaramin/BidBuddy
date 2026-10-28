@@ -1,9 +1,7 @@
 import styled from "styled-components";
 import { useState } from "preact/hooks";
 import Github from "@/assets/icons/github.svg";
-import { Breadcrumb } from "antd";
-import { getCurrentUrl, Link } from "preact-router";
-import { HomeIcon } from "lucide-preact";
+import { getCurrentUrl } from "preact-router";
 
 const Topbar = ({ className }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,26 +14,19 @@ const Topbar = ({ className }) => {
   const handleSave = (e) => {
     setApiKey(e.target.value);
   };
-  const url = getCurrentUrl();
+  const url = getCurrentUrl().split("?")[0].split("#")[0];
 
-  const breadCrumbMapping = {
+  const pageTitles = {
+    "/": "Home",
     "/proposal": "Generate Proposal",
     "/history": "History",
     "/settings": "Settings",
     "/import-export": "Import & Export",
-    "/": "",
   };
 
   return (
     <div className={className}>
-      <Breadcrumb
-        items={[
-          { title: <HomeIcon size={20} />, href: "/" },
-          ...(url !== "/"
-            ? [{ title: breadCrumbMapping[url] }]
-            : [{ title: "Home" }]),
-        ]}
-      />
+      <h1 className="page-title">{pageTitles[url] || "Home"}</h1>
 
       <a
         href="https://github.com/vacaramin/InstantBids"
@@ -50,17 +41,26 @@ const Topbar = ({ className }) => {
 };
 
 export default styled(Topbar)`
-  .ant-breadcrumb {
-    padding: 10px 0px;
-  }
-
   height: 100%;
   width: 100%;
   max-height: var(--topBarHeight);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
+
+  .page-title {
+    margin: 0;
+    min-width: 0;
+    color: #1c1c1c;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .github-contribute {
     display: flex;

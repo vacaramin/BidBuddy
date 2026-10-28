@@ -200,7 +200,6 @@ const Home = ({ className }) => {
 
       <header className="page-header">
         <div className="page-heading">
-          <h1>Dashboard</h1>
           <p>Track proposal volume, success rate, and which models you use.</p>
         </div>
         <Link href="/proposal" className="header-action">
@@ -384,7 +383,6 @@ export default styled(Home)`
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 24px 0 40px;
   background: #ffffff;
 
   &,
@@ -394,7 +392,7 @@ export default styled(Home)`
 
   .page-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 16px 24px;
   }
@@ -402,17 +400,8 @@ export default styled(Home)`
   .page-heading {
     min-width: 0;
 
-    h1 {
-      margin: 0;
-      color: #1c1c1c;
-      font-size: 1.75rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      line-height: 1.2;
-    }
-
     p {
-      margin: 6px 0 0;
+      margin: 0;
       padding: 0;
       max-width: 40rem;
       color: #667085;
@@ -731,7 +720,7 @@ export default styled(Home)`
 
   @media (max-width: 767px) {
     gap: 20px;
-    padding: 4px 0 28px;
+    padding: 0 0 28px;
   }
 
   @media (max-width: 640px) {
@@ -746,10 +735,6 @@ export default styled(Home)`
 
     .stats-grid {
       grid-template-columns: 1fr;
-    }
-
-    .page-heading h1 {
-      font-size: 1.5rem;
     }
 
     .getting-started,

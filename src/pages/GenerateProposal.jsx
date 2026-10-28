@@ -1,5 +1,6 @@
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect, useRef } from "preact/hooks";
 import styled from "styled-components";
+import { ChevronDown, X } from "lucide-preact";
 import {
   getFromStorage,
   saveToStorage,
@@ -23,12 +24,91 @@ const GenerateProposal = ({ className }) => {
   const [generatedProposal, setGeneratedProposal] = useState("");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [keyProviderId, setKeyProviderId] = useState(null);
+  const [keyModalProvider, setKeyModalProvider] = useState(null);
+  const [keyModalOpen, setKeyModalOpen] = useState(false);
+  const [keyDraft, setKeyDraft] = useState("");
+  const [keyError, setKeyError] = useState("");
+  const keyInputRef = useRef(null);
+  const descriptionRef = useRef(null);
+
+  const resizeDescription = (element) => {
+    if (!element) return;
+    const current = element.offsetHeight;
+    element.style.transition = "none";
+    element.style.height = "auto";
+    const border = element.offsetHeight - element.clientHeight;
+    const next = element.scrollHeight + border;
+    element.style.height = `${current}px`;
+    element.style.transition = "";
+    requestAnimationFrame(() => {
+      element.style.height = `${next}px`;
+    });
+  };
 
   useEffect(() => {
-    // Load settings on component mount
+    resizeDescription(descriptionRef.current);
+  }, [formData.project_description]);
+
+  const providerHasKey = (providerId, source = settings) => {
+    const entry = source?.apiKeys?.find((key) => key.provider === providerId);
+    return Boolean(entry?.apiKey?.trim());
+  };
+
+  useEffect(() => {
     const savedSettings = getFromStorage(STORAGE_KEYS.SETTINGS);
     setSettings(savedSettings);
+    const openaiReady = Boolean(
+      savedSettings?.apiKeys?.find(
+        (key) => key.provider === "openai" && key.apiKey?.trim(),
+      ),
+    );
+    const claudeReady = Boolean(
+      savedSettings?.apiKeys?.find(
+        (key) => key.provider === "anthropic" && key.apiKey?.trim(),
+      ),
+    );
+    if (!openaiReady && claudeReady) {
+      setFormData((prev) => ({
+        ...prev,
+        llm_provider: "anthropic",
+        llm_model: getDefaultModel("anthropic"),
+      }));
+    }
   }, []);
+
+  useEffect(() => {
+    if (keyProviderId) {
+      setKeyModalProvider(keyProviderId);
+      return;
+    }
+    setKeyModalOpen(false);
+    const hideTimer = setTimeout(() => {
+      setKeyModalProvider(null);
+      setKeyDraft("");
+      setKeyError("");
+    }, 220);
+    return () => clearTimeout(hideTimer);
+  }, [keyProviderId]);
+
+  useEffect(() => {
+    if (!keyModalProvider || keyModalProvider !== keyProviderId) return;
+    let openFrame;
+    const mountFrame = requestAnimationFrame(() => {
+      openFrame = requestAnimationFrame(() => setKeyModalOpen(true));
+    });
+    keyInputRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setKeyProviderId(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      cancelAnimationFrame(mountFrame);
+      if (openFrame) cancelAnimationFrame(openFrame);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [keyModalProvider, keyProviderId]);
 
   const handleInputChange = (name, value) => {
     setFormData((prev) => ({
@@ -81,13 +161,94 @@ ${promptSettings.customPromptSuffix || ""}`;
   };
 
   const getApiKey = () => {
-    if (!settings?.apiKeys) return null;
-
-    const apiKeyObj = settings.apiKeys.find(
-      (key) => key.provider === formData.llm_provider && key.isValid === true,
+    const entry = settings?.apiKeys?.find(
+      (key) => key.provider === formData.llm_provider,
     );
+    return entry?.apiKey?.trim() || null;
+  };
 
-    return apiKeyObj?.apiKey || null;
+  const keyLooksValid = (providerId, value) => {
+    if (providerId === "openai")
+      return value.startsWith("sk-") && value.length > 20;
+    if (providerId === "anthropic") {
+      return value.startsWith("sk-ant-") && value.length > 30;
+    }
+    return value.length > 10;
+  };
+
+  const openKeyForm = (providerId) => {
+    setKeyProviderId(providerId);
+    setKeyDraft("");
+    setKeyError("");
+  };
+
+  const closeKeyForm = () => {
+    setKeyProviderId(null);
+  };
+
+  const chooseProvider = (provider) => {
+    if (!providerHasKey(provider.id)) {
+      openKeyForm(provider.id);
+      return;
+    }
+    closeKeyForm();
+    handleInputChange("llm_provider", provider.id);
+    handleInputChange("llm_model", provider.defaultModel);
+  };
+
+  const saveProviderKey = () => {
+    const provider = PROVIDERS.find((item) => item.id === keyProviderId);
+    if (!provider) return;
+    const value = keyDraft.trim();
+    if (!keyLooksValid(provider.id, value)) {
+      setKeyError(
+        provider.id === "openai"
+          ? "A ChatGPT key starts with sk-."
+          : "A Claude key starts with sk-ant-.",
+      );
+      return;
+    }
+
+    const current = settings || {};
+    const personalInfo = {
+      name: "",
+      email: "",
+      phone: "",
+      githubUrl: "",
+      linkedinUrl: "",
+      portfolioUrl: "",
+      ...(current.personalInfo || {}),
+    };
+    const promptSettings = {
+      customPromptPrefix: "",
+      customPromptSuffix: "",
+      maxWords: 500,
+      ...(current.promptSettings || {}),
+    };
+    const apiKeys = Array.isArray(current.apiKeys) ? [...current.apiKeys] : [];
+    const index = apiKeys.findIndex((key) => key.provider === provider.id);
+    if (index >= 0) {
+      apiKeys[index] = { ...apiKeys[index], apiKey: value, isValid: true };
+    } else {
+      apiKeys.push({
+        id: Date.now(),
+        provider: provider.id,
+        name: provider.name,
+        apiKey: value,
+        isValid: true,
+      });
+    }
+    const nextSettings = {
+      ...current,
+      personalInfo,
+      promptSettings,
+      apiKeys,
+    };
+    saveToStorage(STORAGE_KEYS.SETTINGS, nextSettings);
+    setSettings(nextSettings);
+    handleInputChange("llm_provider", provider.id);
+    handleInputChange("llm_model", provider.defaultModel);
+    closeKeyForm();
   };
 
   const handleSubmit = async (e) => {
@@ -102,6 +263,7 @@ ${promptSettings.customPromptSuffix || ""}`;
     if (!apiKey) {
       // No API key available, just show the prompt
       setGeneratedProposal("");
+      setPromptOpen(false);
       setShowResults(true);
       return;
     }
@@ -158,6 +320,7 @@ ${promptSettings.customPromptSuffix || ""}`;
       setGeneratedProposal(errorMessage);
     } finally {
       setIsGenerating(false);
+      setPromptOpen(false);
       setShowResults(true);
     }
   };
@@ -188,6 +351,7 @@ ${promptSettings.customPromptSuffix || ""}`;
     });
     setGeneratedProposal("");
     setGeneratedPrompt("");
+    setPromptOpen(false);
     setShowResults(false);
     setErrors({});
   };
@@ -212,11 +376,15 @@ ${promptSettings.customPromptSuffix || ""}`;
 
   return (
     <div className={className}>
-      <h1>Generate Proposal</h1>
       <div className="container">
         {!showResults ? (
           <div className="proposal-card">
-            <form onSubmit={handleSubmit}>
+            <form
+              className={`proposal-form${
+                formData.project_description.trim() ? " has-submit" : ""
+              }`}
+              onSubmit={handleSubmit}
+            >
               <div className="section">
                 <div className="form-group">
                   <label htmlFor="project_description">
@@ -225,6 +393,7 @@ ${promptSettings.customPromptSuffix || ""}`;
                   <div className="input-wrapper">
                     <textarea
                       id="project_description"
+                      ref={descriptionRef}
                       rows={4}
                       placeholder="Paste the project description from the job posting or describe your project in detail..."
                       value={formData.project_description}
@@ -242,7 +411,11 @@ ${promptSettings.customPromptSuffix || ""}`;
                   )}
                 </div>
 
-                <div className="form-row">
+                <div
+                  className={`form-row ${
+                    providerHasKey(formData.llm_provider) ? "" : "providers-only"
+                  }`}
+                >
                   <div className="form-group">
                     <label id="llm_provider-label">AI Provider *</label>
                     <div
@@ -250,57 +423,64 @@ ${promptSettings.customPromptSuffix || ""}`;
                       role="radiogroup"
                       aria-labelledby="llm_provider-label"
                     >
-                      {PROVIDERS.map((provider) => (
-                        <button
-                          key={provider.id}
-                          type="button"
-                          role="radio"
-                          aria-checked={formData.llm_provider === provider.id}
-                          className={`provider-choice ${
-                            formData.llm_provider === provider.id
-                              ? "active"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            handleInputChange("llm_provider", provider.id);
-                            handleInputChange(
-                              "llm_model",
-                              provider.defaultModel,
-                            );
-                          }}
-                        >
-                          <ProviderLogo provider={provider.id} />
-                          <span>{provider.name}</span>
-                        </button>
-                      ))}
+                      {PROVIDERS.map((provider) => {
+                        const hasKey = providerHasKey(provider.id);
+                        const selected =
+                          hasKey && formData.llm_provider === provider.id;
+                        return (
+                          <button
+                            key={provider.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            aria-disabled={!hasKey}
+                            className={`provider-choice ${selected ? "active" : ""} ${
+                              hasKey ? "" : "locked"
+                            }`}
+                            onClick={() => chooseProvider(provider)}
+                          >
+                            <ProviderLogo provider={provider.id} />
+                            <span className="provider-copy">
+                              <span>{provider.name}</span>
+                              {!hasKey && (
+                                <span className="provider-hint">Add key</span>
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="llm_model">AI Model *</label>
-                    <div className="input-wrapper model-field">
-                      <ProviderLogo provider={formData.llm_provider} />
-                      <select
-                        id="llm_model"
-                        value={formData.llm_model}
-                        onChange={(e) =>
-                          handleInputChange("llm_model", e.target.value)
-                        }
-                        className={errors.llm_model ? "error" : ""}
-                      >
-                        {getModels(formData.llm_provider).map((model) => (
-                          <option key={model.id} value={model.id}>
-                            {model.name}
-                            {model.note ? ` — ${model.note}` : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="input-border"></div>
+                  {providerHasKey(formData.llm_provider) && (
+                    <div className="form-group">
+                      <label htmlFor="llm_model">AI Model *</label>
+                      <div className="input-wrapper model-field">
+                        <ProviderLogo provider={formData.llm_provider} />
+                        <select
+                          id="llm_model"
+                          value={formData.llm_model}
+                          onChange={(e) =>
+                            handleInputChange("llm_model", e.target.value)
+                          }
+                          className={errors.llm_model ? "error" : ""}
+                        >
+                          {getModels(formData.llm_provider).map((model) => (
+                            <option key={model.id} value={model.id}>
+                              {model.name}
+                              {model.note ? ` — ${model.note}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="input-border"></div>
+                      </div>
+                      {errors.llm_model && (
+                        <span className="error-message">
+                          {errors.llm_model}
+                        </span>
+                      )}
                     </div>
-                    {errors.llm_model && (
-                      <span className="error-message">{errors.llm_model}</span>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -327,29 +507,24 @@ ${promptSettings.customPromptSuffix || ""}`;
                 </div>
               </div>
 
-              {!hasValidApiKey() && (
-                <div className="warning-message">
-                  ⚠️ No valid API key found for {formData.llm_provider}. You'll
-                  get the prompt to use manually.
+              {formData.project_description.trim() && (
+                <div className="submit-section">
+                  <button
+                    type="submit"
+                    className="generate-btn"
+                    disabled={isGenerating}
+                  >
+                    <span className="btn-text">
+                      {isGenerating
+                        ? "Generating..."
+                        : hasValidApiKey()
+                          ? "Generate Proposal"
+                          : "Generate Prompt"}
+                    </span>
+                    <div className="btn-shine"></div>
+                  </button>
                 </div>
               )}
-
-              <div className="submit-section">
-                <button
-                  type="submit"
-                  className="generate-btn"
-                  disabled={isGenerating}
-                >
-                  <span className="btn-text">
-                    {isGenerating
-                      ? "Generating..."
-                      : hasValidApiKey()
-                        ? "Generate Proposal"
-                        : "Generate Prompt"}
-                  </span>
-                  <div className="btn-shine"></div>
-                </button>
-              </div>
             </form>
           </div>
         ) : (
@@ -357,12 +532,6 @@ ${promptSettings.customPromptSuffix || ""}`;
             <div className="results-header">
               <h2>Results</h2>
               <div className="results-actions">
-                <button
-                  className="action-btn"
-                  onClick={() => copyToClipboard(generatedPrompt)}
-                >
-                  Copy Prompt
-                </button>
                 {generatedProposal && (
                   <button
                     className="action-btn"
@@ -389,48 +558,139 @@ ${promptSettings.customPromptSuffix || ""}`;
 
               {!generatedProposal && (
                 <div className="no-api-message">
-                  <h3>No API Key Available</h3>
                   <p>
-                    Copy the prompt above and use it with your preferred AI
-                    service to generate the proposal.
+                    Add an API key to generate the proposal. You can still copy
+                    the prompt and use it yourself.
                   </p>
                 </div>
               )}
 
-              <div className="result-section">
-                <h3>Generated Prompt:</h3>
-                <div className="prompt-text">
-                  <pre>{generatedPrompt}</pre>
+              <div className={`prompt-disclosure${promptOpen ? " open" : ""}`}>
+                <div className="prompt-disclosure-header">
+                  <button
+                    type="button"
+                    className="prompt-toggle"
+                    aria-expanded={promptOpen}
+                    onClick={() => setPromptOpen((open) => !open)}
+                  >
+                    <ChevronDown size={18} />
+                    <span>Generated Prompt</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="action-btn"
+                    onClick={() => copyToClipboard(generatedPrompt)}
+                  >
+                    Copy Prompt
+                  </button>
+                </div>
+                <div className="prompt-body">
+                  <div className="prompt-body-inner">
+                    <div className="prompt-text">
+                      <pre>{generatedPrompt}</pre>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
       </div>
+      {keyModalProvider && (
+        <div
+          className={`key-modal-overlay${keyModalOpen ? " open" : ""}`}
+          onClick={closeKeyForm}
+        >
+          <div
+            className="key-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="key-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="key-modal-header">
+              <div className="key-modal-heading">
+                <ProviderLogo provider={keyModalProvider} size={22} />
+                <h2 id="key-modal-title">
+                  Add{" "}
+                  {PROVIDERS.find((item) => item.id === keyModalProvider)?.name}{" "}
+                  API key
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="key-close"
+                onClick={closeKeyForm}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <label htmlFor="provider-api-key">API key</label>
+            <input
+              id="provider-api-key"
+              ref={keyInputRef}
+              type="text"
+              autoComplete="off"
+              placeholder={
+                keyModalProvider === "openai" ? "sk-..." : "sk-ant-..."
+              }
+              value={keyDraft}
+              onInput={(e) => {
+                setKeyDraft(e.target.value);
+                if (keyError) setKeyError("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveProviderKey();
+                }
+              }}
+            />
+            {keyError && <span className="error-message">{keyError}</span>}
+            <div className="key-modal-footer">
+              <a
+                href={
+                  PROVIDERS.find((item) => item.id === keyModalProvider)?.keyUrl
+                }
+                target="_blank"
+                rel="noreferrer"
+              >
+                Get a{" "}
+                {PROVIDERS.find((item) => item.id === keyModalProvider)?.name}{" "}
+                key
+              </a>
+              <div className="key-modal-actions">
+                <button
+                  type="button"
+                  className="key-cancel"
+                  onClick={closeKeyForm}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="key-save"
+                  onClick={saveProviderKey}
+                >
+                  Save key
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default styled(GenerateProposal)`
-  min-height: calc(100vh - var(--topBarHeight));
-  position: relative;
-  overflow-x: hidden;
   background: #ffffff;
+  box-sizing: border-box;
 
   .container {
     position: relative;
     z-index: 1;
-    padding: 0px 20px;
-  }
-
-  .warning-message {
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 30px;
-    color: #d97706;
-    font-weight: 600;
   }
 
   .section {
@@ -441,6 +701,10 @@ export default styled(GenerateProposal)`
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 30px;
+
+    &.providers-only {
+      grid-template-columns: 1fr;
+    }
 
     @media (max-width: 768px) {
       grid-template-columns: 1fr;
@@ -567,6 +831,174 @@ export default styled(GenerateProposal)`
       border-color: #5486c0;
       background: rgba(84, 134, 192, 0.1);
     }
+
+    &.locked {
+      color: #98a2b3;
+      background: rgba(0, 0, 0, 0.03);
+      border-style: dashed;
+      box-shadow: none;
+
+      img {
+        opacity: 0.4;
+      }
+    }
+
+    .provider-copy {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.2;
+    }
+
+    .provider-hint {
+      margin-top: 2px;
+      color: #6296d3;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+  }
+
+  .key-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.48);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    &.open {
+      opacity: 1;
+
+      .key-modal {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  }
+
+  .key-modal {
+    width: min(440px, 100%);
+    padding: 24px;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+    box-sizing: border-box;
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+
+    label {
+      margin-bottom: 8px;
+    }
+
+    .error-message {
+      margin-top: 8px;
+    }
+  }
+
+  .key-modal-header,
+  .key-modal-heading,
+  .key-modal-footer,
+  .key-modal-actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .key-modal-header {
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .key-modal-heading {
+    gap: 10px;
+    min-width: 0;
+
+    h2 {
+      margin: 0;
+      color: #1c1c1c;
+      font-size: 1.15rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    img {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+  }
+
+  .key-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #667085;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: #1c1c1c;
+    }
+  }
+
+  .key-modal-footer {
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+
+    a {
+      color: #3969a0;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+  }
+
+  .key-modal-actions {
+    gap: 8px;
+  }
+
+  .key-cancel,
+  .key-save {
+    padding: 10px 16px;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .key-cancel {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: #ffffff;
+    color: #374151;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  .key-save {
+    border: none;
+    background: #6296d3;
+    color: #ffffff;
+
+    &:hover {
+      background: #3969a0;
+    }
   }
 
   .model-field {
@@ -611,6 +1043,17 @@ export default styled(GenerateProposal)`
     line-height: 1.6;
   }
 
+  #project_description {
+    min-height: 120px;
+    overflow: hidden;
+    resize: none;
+    transition:
+      height 0.2s ease,
+      border-color 0.3s ease,
+      background 0.3s ease,
+      transform 0.3s ease;
+  }
+
   .error-message {
     display: flex;
     align-items: center;
@@ -626,9 +1069,28 @@ export default styled(GenerateProposal)`
     }
   }
 
+  .proposal-form.has-submit {
+    padding-bottom: 108px;
+  }
+
   .submit-section {
-    text-align: center;
-    margin-top: 60px;
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  @media (min-width: 768px) {
+    .submit-section {
+      left: var(--sidebarWidth);
+    }
   }
 
   .generate-btn {
@@ -751,6 +1213,68 @@ export default styled(GenerateProposal)`
     }
   }
 
+  .prompt-disclosure {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    background: #ffffff;
+    overflow: hidden;
+  }
+
+  .prompt-disclosure-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .prompt-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #1c1c1c;
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    svg {
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+  }
+
+  .prompt-disclosure.open .prompt-toggle svg {
+    transform: rotate(180deg);
+  }
+
+  .prompt-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.2s ease;
+  }
+
+  .prompt-disclosure.open .prompt-body {
+    grid-template-rows: 1fr;
+  }
+
+  .prompt-body-inner {
+    overflow: hidden;
+  }
+
+  .prompt-disclosure .prompt-text {
+    margin: 0 16px 16px;
+  }
+
+  .prompt-disclosure:not(.open) .prompt-text {
+    margin-bottom: 0;
+  }
+
   .prompt-text,
   .proposal-text {
     background: rgba(0, 0, 0, 0.05);
@@ -770,25 +1294,22 @@ export default styled(GenerateProposal)`
 
   .no-api-message {
     text-align: center;
-    padding: 40px;
-    background: rgba(59, 130, 246, 0.1);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    background: rgba(251, 191, 36, 0.1);
     border-radius: 12px;
-    border: 2px solid rgba(59, 130, 246, 0.2);
-
-    h3 {
-      color: #3b82f6;
-      margin-bottom: 12px;
-    }
+    border: 1px solid rgba(251, 191, 36, 0.3);
 
     p {
-      color: #1e40af;
+      color: #d97706;
       margin: 0;
+      font-weight: 600;
     }
   }
 
   @media (max-width: 768px) {
     .container {
-      padding: 20px 15px;
+      padding: 24px 15px 32px;
     }
 
     .section {

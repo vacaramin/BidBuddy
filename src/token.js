@@ -10,10 +10,6 @@ const token = {
     fontWeight: "900",
   },
   components: {
-    Breadcrumb: {
-      iconFontSize: "40px",
-      lastItemColor: "#3d3d3dff",
-    },
     Card: {
       colorBgContainer: "rgba(255, 255, 255, 0.05)",
       colorBorderSecondary: "rgba(255, 255, 255, 0.1)",
