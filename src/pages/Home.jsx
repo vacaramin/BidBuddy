@@ -156,6 +156,9 @@ const Home = ({ className }) => {
       {!welcomeDismissed && (
         <section className="getting-started">
           <div className="getting-started-top">
+            <div className="section-icon" aria-hidden="true">
+              <FileText size={18} />
+            </div>
             <div className="getting-started-copy">
               <h2>Welcome to BidBuddy</h2>
               <p>
@@ -174,25 +177,25 @@ const Home = ({ className }) => {
           </div>
           <div className="getting-started-steps">
             <Link href="/settings" className="step">
-              <div className="step-number">1</div>
-              <div className="step-content">
-                <h3>Configure settings</h3>
-                <p>Add your profile and API keys.</p>
-              </div>
+              <span className="step-number">1</span>
+              <span className="step-content">
+                <strong>Configure settings</strong>
+                <span>Add your profile and API keys.</span>
+              </span>
             </Link>
             <Link href="/proposal" className="step">
-              <div className="step-number">2</div>
-              <div className="step-content">
-                <h3>Generate a proposal</h3>
-                <p>Create your first AI-written bid.</p>
-              </div>
+              <span className="step-number">2</span>
+              <span className="step-content">
+                <strong>Generate a proposal</strong>
+                <span>Create your first AI-written bid.</span>
+              </span>
             </Link>
             <Link href="/history" className="step">
-              <div className="step-number">3</div>
-              <div className="step-content">
-                <h3>Review history</h3>
-                <p>Open past proposals any time.</p>
-              </div>
+              <span className="step-number">3</span>
+              <span className="step-content">
+                <strong>Review history</strong>
+                <span>Open past proposals any time.</span>
+              </span>
             </Link>
           </div>
         </section>
@@ -435,22 +438,29 @@ export default styled(Home)`
   .getting-started {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 24px;
-    border: 2px solid rgba(98, 150, 211, 0.22);
+    gap: 16px;
+    padding: 20px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 16px;
-    background: linear-gradient(
-      135deg,
-      rgba(98, 150, 211, 0.12) 0%,
-      rgba(123, 177, 241, 0.05) 100%
-    );
+    background: rgba(0, 0, 0, 0.02);
   }
 
   .getting-started-top {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
+  }
+
+  .section-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgba(98, 150, 211, 0.12);
+    color: #3969a0;
   }
 
   .welcome-close {
@@ -462,40 +472,43 @@ export default styled(Home)`
     flex-shrink: 0;
     margin: 0;
     padding: 0;
-    border: 1px solid rgba(98, 150, 211, 0.35);
+    border: 1px solid #e6e8ec;
     border-radius: 8px;
     background: #ffffff;
-    color: #4b5563;
+    color: #667085;
     cursor: pointer;
 
     &:hover {
-      background: #f3f6fb;
+      background: #f7fafd;
       color: #1c1c1c;
     }
   }
 
   .getting-started-copy {
+    flex: 1;
+    min-width: 0;
+
     h2 {
       margin: 0;
       color: #1c1c1c;
-      font-size: 1.25rem;
+      font-size: 1.05rem;
       font-weight: 700;
       line-height: 1.3;
     }
 
     p {
-      margin: 6px 0 0;
-      max-width: 42rem;
-      color: #4b5563;
-      font-size: 0.98rem;
-      line-height: 1.5;
+      margin: 4px 0 0;
+      max-width: 40rem;
+      color: #667085;
+      font-size: 0.9rem;
+      line-height: 1.45;
     }
   }
 
   .getting-started-steps {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 8px;
   }
 
   .step {
@@ -504,46 +517,47 @@ export default styled(Home)`
     gap: 12px;
     min-width: 0;
     height: 100%;
-    padding: 16px;
-    border: 1px solid rgba(98, 150, 211, 0.2);
+    padding: 14px;
+    border: 1px solid #e6e8ec;
     border-radius: 12px;
     background: #ffffff;
     color: inherit;
     text-decoration: none;
 
     &:hover {
-      border-color: rgba(98, 150, 211, 0.55);
+      background: #f7fafd;
     }
 
     .step-number {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       flex-shrink: 0;
-      border-radius: 50%;
-      background: #6296d3;
-      color: #ffffff;
-      font-size: 0.9rem;
+      border-radius: 999px;
+      background: rgba(98, 150, 211, 0.14);
+      color: #3969a0;
+      font-size: 0.85rem;
       font-weight: 700;
     }
 
     .step-content {
       min-width: 0;
 
-      h3 {
-        margin: 0;
+      strong {
+        display: block;
         color: #1c1c1c;
-        font-size: 0.98rem;
+        font-size: 0.95rem;
         font-weight: 700;
         line-height: 1.3;
       }
 
-      p {
-        margin: 4px 0 0;
+      span {
+        display: block;
+        margin-top: 4px;
         color: #667085;
-        font-size: 0.88rem;
+        font-size: 0.92rem;
         line-height: 1.45;
       }
     }

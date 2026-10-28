@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 import styled from "styled-components";
-import { ChevronDown, RefreshCw, X } from "lucide-preact";
+import {
+  CalendarClock,
+  ChevronDown,
+  CircleDollarSign,
+  Play,
+  RefreshCw,
+  X,
+} from "lucide-preact";
 import {
   getFromStorage,
   saveToStorage,
@@ -17,13 +24,69 @@ const resultIdFromUrl = (url = getCurrentUrl()) => {
   return new URLSearchParams(query).get("id");
 };
 
+const DEADLINE_OPTIONS = [
+  { value: "", label: "Deadline" },
+  { value: "asap", label: "As soon as possible" },
+  { value: "1_week", label: "Within a week" },
+  { value: "2_weeks", label: "Within 2 weeks" },
+  { value: "1_month", label: "Within a month" },
+  { value: "flexible", label: "Flexible" },
+  { value: "custom", label: "Custom deadline" },
+];
+
+const BUDGET_OPTIONS = [
+  { value: "", label: "Budget" },
+  { value: "discuss", label: "Prefer to discuss" },
+  { value: "hourly", label: "Hourly" },
+  { value: "under_500", label: "Under $500" },
+  { value: "500_2000", label: "$500–$2,000" },
+  { value: "2000_5000", label: "$2,000–$5,000" },
+  { value: "5000_10000", label: "$5,000–$10,000" },
+  { value: "10000_plus", label: "$10,000+" },
+  { value: "custom", label: "Custom budget" },
+];
+
+const START_OPTIONS = [
+  { value: "", label: "Start" },
+  { value: "immediately", label: "Immediately" },
+  { value: "this_week", label: "This week" },
+  { value: "next_week", label: "Next week" },
+  { value: "tbd", label: "To be agreed" },
+];
+
+const emptyBidFields = {
+  deadline: "",
+  deadlineCustom: "",
+  includeDeadline: false,
+  budget: "",
+  budgetCustom: "",
+  includeBudget: false,
+  start: "",
+  includeStart: false,
+};
+
+const createEmptyForm = () => ({
+  project_description: "",
+  llm_model: getDefaultModel("openai"),
+  llm_provider: "openai",
+  additional_notes: "",
+  ...emptyBidFields,
+});
+
+const optionLabel = (options, value) =>
+  options.find((option) => option.value === value)?.label || "";
+
+const resolveBidValue = (value, custom, options) => {
+  if (!value) return "";
+  if (value === "custom") {
+    const trimmed = custom.trim();
+    return trimmed || "";
+  }
+  return optionLabel(options, value) || value;
+};
+
 const GenerateProposal = ({ className }) => {
-  const [formData, setFormData] = useState({
-    project_description: "",
-    llm_model: getDefaultModel("openai"),
-    llm_provider: "openai",
-    additional_notes: "",
-  });
+  const [formData, setFormData] = useState(createEmptyForm);
 
   const [settings, setSettings] = useState(null);
   const [errors, setErrors] = useState({});
@@ -74,12 +137,7 @@ const GenerateProposal = ({ className }) => {
         skipResultClear.current = false;
         return;
       }
-      setFormData({
-        project_description: "",
-        llm_model: getDefaultModel("openai"),
-        llm_provider: "openai",
-        additional_notes: "",
-      });
+      setFormData(createEmptyForm());
       setGeneratedProposal("");
       setGeneratedPrompt("");
       setGenerationError("");
@@ -95,11 +153,20 @@ const GenerateProposal = ({ className }) => {
     if (!found) return;
 
     setFormData({
+      ...createEmptyForm(),
       project_description: found.project_description || "",
       additional_notes: found.additional_notes || "",
       llm_provider: found.llm_provider || "openai",
       llm_model:
         found.llm_model || getDefaultModel(found.llm_provider || "openai"),
+      deadline: found.deadline || "",
+      deadlineCustom: found.deadlineCustom || "",
+      includeDeadline: Boolean(found.includeDeadline),
+      budget: found.budget || "",
+      budgetCustom: found.budgetCustom || "",
+      includeBudget: Boolean(found.includeBudget),
+      start: found.start || "",
+      includeStart: Boolean(found.includeStart),
     });
     setGeneratedPrompt(found.prompt_used || "");
     setGeneratedProposal(found.generated_proposal || "");
@@ -163,10 +230,23 @@ const GenerateProposal = ({ className }) => {
   }, [keyModalProvider, keyProviderId]);
 
   const handleInputChange = (name, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+
+      if (name === "deadline") {
+        next.includeDeadline = Boolean(value);
+        if (value !== "custom") next.deadlineCustom = "";
+      }
+      if (name === "budget") {
+        next.includeBudget = Boolean(value);
+        if (value !== "custom") next.budgetCustom = "";
+      }
+      if (name === "start") {
+        next.includeStart = Boolean(value);
+      }
+
+      return next;
+    });
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -193,6 +273,49 @@ const GenerateProposal = ({ className }) => {
     const personalInfo = settings?.personalInfo || {};
     const promptSettings = settings?.promptSettings || {};
 
+    const deadlineText = resolveBidValue(
+      formData.deadline,
+      formData.deadlineCustom,
+      DEADLINE_OPTIONS,
+    );
+    const budgetText = resolveBidValue(
+      formData.budget,
+      formData.budgetCustom,
+      BUDGET_OPTIONS,
+    );
+    const startText = resolveBidValue(
+      formData.start,
+      "",
+      START_OPTIONS,
+    );
+
+    const includeDeadline = formData.includeDeadline && Boolean(deadlineText);
+    const includeBudget = formData.includeBudget && Boolean(budgetText);
+    const includeStart = formData.includeStart && Boolean(startText);
+
+    const weaveLines = [];
+    if (includeDeadline) {
+      weaveLines.push(
+        `- Mention a project deadline of "${deadlineText}" naturally in the letter.`,
+      );
+    } else {
+      weaveLines.push("- Do not mention a deadline.");
+    }
+    if (includeBudget) {
+      weaveLines.push(
+        `- Mention a budget of "${budgetText}" naturally in the letter.`,
+      );
+    } else {
+      weaveLines.push("- Do not mention budget.");
+    }
+    if (includeStart) {
+      weaveLines.push(
+        `- Mention availability to start "${startText}" naturally in the letter.`,
+      );
+    } else {
+      weaveLines.push("- Do not mention a start date.");
+    }
+
     let prompt = `${promptSettings.customPromptPrefix || ""}  
 
 I need you to write a compelling project proposal based on the following project description:
@@ -201,7 +324,13 @@ I need you to write a compelling project proposal based on the following project
 
 ${formData.additional_notes ? `Additional context: ${formData.additional_notes}` : ""}
 
-Please create a proposal that includes my personal details and is approximately ${promptSettings.maxWords || 500} words
+Please create a proposal that includes my personal details and is approximately ${promptSettings.maxWords || 500} words.
+Introduce me using the profile below in whatever way fits this job.
+Do not add a title, heading, or labeled sections such as "Deadline" or "Budget".
+Weave any of the following facts into the prose only when instructed:
+
+${weaveLines.join("\n")}
+
 ${personalInfo.name ? `My name is ${personalInfo.name}.` : ""}
 ${personalInfo.portfolioUrl ? `Portfolio: ${personalInfo.portfolioUrl}` : ""}
 ${personalInfo.githubUrl ? `GitHub: ${personalInfo.githubUrl}` : ""}
@@ -315,6 +444,16 @@ ${promptSettings.customPromptSuffix || ""}`;
       const next = [...existingProposals];
       next[replaceIndex] = {
         ...next[replaceIndex],
+        llm_provider: formData.llm_provider,
+        llm_model: formData.llm_model,
+        deadline: formData.deadline,
+        deadlineCustom: formData.deadlineCustom,
+        includeDeadline: formData.includeDeadline,
+        budget: formData.budget,
+        budgetCustom: formData.budgetCustom,
+        includeBudget: formData.includeBudget,
+        start: formData.start,
+        includeStart: formData.includeStart,
         prompt_used: prompt,
         generated_proposal: proposalContent || "",
         generation_error: errorMessage || "",
@@ -328,6 +467,14 @@ ${promptSettings.customPromptSuffix || ""}`;
         additional_notes: formData.additional_notes,
         llm_provider: formData.llm_provider,
         llm_model: formData.llm_model,
+        deadline: formData.deadline,
+        deadlineCustom: formData.deadlineCustom,
+        includeDeadline: formData.includeDeadline,
+        budget: formData.budget,
+        budgetCustom: formData.budgetCustom,
+        includeBudget: formData.includeBudget,
+        start: formData.start,
+        includeStart: formData.includeStart,
         prompt_used: prompt,
         generated_proposal: proposalContent || "",
         generation_error: errorMessage || "",
@@ -410,9 +557,14 @@ ${promptSettings.customPromptSuffix || ""}`;
     await generateProposal(prompt);
   };
 
-  const retryGeneration = () => {
-    if (!generatedPrompt || isGenerating) return;
-    generateProposal(generatedPrompt, resultId);
+  const retryGeneration = async () => {
+    if (isGenerating) return;
+    if (!formData.project_description.trim()) return;
+    if (!formData.llm_model) return;
+
+    const prompt = buildPrompt();
+    setGeneratedPrompt(prompt);
+    await generateProposal(prompt, resultId);
   };
 
   const copyToClipboard = async (text) => {
@@ -421,12 +573,7 @@ ${promptSettings.customPromptSuffix || ""}`;
   };
 
   const resetForm = () => {
-    setFormData({
-      project_description: "",
-      llm_model: getDefaultModel("openai"),
-      llm_provider: "openai",
-      additional_notes: "",
-    });
+    setFormData(createEmptyForm());
     setGeneratedProposal("");
     setGeneratedPrompt("");
     setGenerationError("");
@@ -439,6 +586,10 @@ ${promptSettings.customPromptSuffix || ""}`;
   const hasValidApiKey = () => {
     return getApiKey() !== null;
   };
+
+  const providersWithKeys = PROVIDERS.filter((provider) =>
+    providerHasKey(provider.id),
+  );
   if (isGenerating) {
     return (
       <div
@@ -491,6 +642,121 @@ ${promptSettings.customPromptSuffix || ""}`;
                   )}
                 </div>
 
+                <div className="bid-row">
+                  <label className="select-wrap">
+                    <CalendarClock
+                      className="select-icon"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    <select
+                      aria-label="Deadline"
+                      value={formData.deadline}
+                      onChange={(e) =>
+                        handleInputChange("deadline", e.target.value)
+                      }
+                    >
+                      {DEADLINE_OPTIONS.map((option) => (
+                        <option
+                          key={option.value || "deadline-none"}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="select-chevron"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  </label>
+                  {formData.deadline === "custom" && (
+                    <input
+                      className="bid-custom"
+                      type="text"
+                      aria-label="Custom deadline"
+                      placeholder="Custom deadline"
+                      value={formData.deadlineCustom}
+                      onChange={(e) =>
+                        handleInputChange("deadlineCustom", e.target.value)
+                      }
+                    />
+                  )}
+
+                  <label className="select-wrap">
+                    <CircleDollarSign
+                      className="select-icon"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    <select
+                      aria-label="Budget"
+                      value={formData.budget}
+                      onChange={(e) =>
+                        handleInputChange("budget", e.target.value)
+                      }
+                    >
+                      {BUDGET_OPTIONS.map((option) => (
+                        <option
+                          key={option.value || "budget-none"}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="select-chevron"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  </label>
+                  {formData.budget === "custom" && (
+                    <input
+                      className="bid-custom"
+                      type="text"
+                      aria-label="Custom budget"
+                      placeholder="Custom budget"
+                      value={formData.budgetCustom}
+                      onChange={(e) =>
+                        handleInputChange("budgetCustom", e.target.value)
+                      }
+                    />
+                  )}
+
+                  <label className="select-wrap">
+                    <Play
+                      className="select-icon"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    <select
+                      aria-label="Start"
+                      value={formData.start}
+                      onChange={(e) =>
+                        handleInputChange("start", e.target.value)
+                      }
+                    >
+                      {START_OPTIONS.map((option) => (
+                        <option
+                          key={option.value || "start-none"}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="select-chevron"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="section">
                 <div
                   className={`form-row ${
                     providerHasKey(formData.llm_provider) ? "" : "providers-only"
@@ -535,7 +801,11 @@ ${promptSettings.customPromptSuffix || ""}`;
                   {providerHasKey(formData.llm_provider) && (
                     <div className="form-group">
                       <label htmlFor="llm_model">AI Model *</label>
-                      <div className="input-wrapper model-field">
+                      <div
+                        className={`input-wrapper model-field${
+                          errors.llm_model ? " error" : ""
+                        }`}
+                      >
                         <ProviderLogo provider={formData.llm_provider} />
                         <select
                           id="llm_model"
@@ -543,7 +813,6 @@ ${promptSettings.customPromptSuffix || ""}`;
                           onChange={(e) =>
                             handleInputChange("llm_model", e.target.value)
                           }
-                          className={errors.llm_model ? "error" : ""}
                         >
                           {getModels(formData.llm_provider).map((model) => (
                             <option key={model.id} value={model.id}>
@@ -552,7 +821,7 @@ ${promptSettings.customPromptSuffix || ""}`;
                             </option>
                           ))}
                         </select>
-                        <div className="input-border"></div>
+                        <ChevronDown size={16} aria-hidden="true" />
                       </div>
                       {errors.llm_model && (
                         <span className="error-message">
@@ -562,21 +831,14 @@ ${promptSettings.customPromptSuffix || ""}`;
                     </div>
                   )}
                 </div>
-              </div>
 
-              <div className="section">
                 <div className="form-group">
-                  <label htmlFor="additional_notes">
-                    Additional Notes
-                    <span className="label-hint">
-                      Any specific requirements or context
-                    </span>
-                  </label>
+                  <label htmlFor="additional_notes">Additional Notes</label>
                   <div className="input-wrapper">
                     <textarea
                       id="additional_notes"
                       rows={3}
-                      placeholder="Share any specific requirements, deadlines, budget constraints, or special points you want to highlight..."
+                      placeholder="Share any other requirements or special points you want to highlight..."
                       value={formData.additional_notes}
                       onChange={(e) =>
                         handleInputChange("additional_notes", e.target.value)
@@ -645,14 +907,6 @@ ${promptSettings.customPromptSuffix || ""}`;
               {generationError && (
                 <div className="generation-error">
                   <p>{generationError}</p>
-                  <button
-                    type="button"
-                    className="retry-btn"
-                    onClick={retryGeneration}
-                  >
-                    <RefreshCw size={16} />
-                    Retry
-                  </button>
                 </div>
               )}
 
@@ -662,6 +916,79 @@ ${promptSettings.customPromptSuffix || ""}`;
                     Add an API key to generate the proposal. You can still copy
                     the prompt and use it yourself.
                   </p>
+                </div>
+              )}
+
+              {providersWithKeys.length > 0 && (
+                <div className="retry-bar">
+                  {providersWithKeys.length > 1 && (
+                    <div
+                      className="retry-providers"
+                      role="radiogroup"
+                      aria-label="AI provider"
+                    >
+                      {providersWithKeys.map((provider) => {
+                        const selected =
+                          formData.llm_provider === provider.id;
+                        return (
+                          <button
+                            key={provider.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            className={`retry-provider${
+                              selected ? " active" : ""
+                            }`}
+                            onClick={() => chooseProvider(provider)}
+                          >
+                            <ProviderLogo provider={provider.id} size={18} />
+                            <span>{provider.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <label className="select-wrap retry-model-wrap">
+                    <select
+                      aria-label="AI model"
+                      value={formData.llm_model}
+                      onChange={(e) =>
+                        handleInputChange("llm_model", e.target.value)
+                      }
+                    >
+                      {getModels(
+                        providerHasKey(formData.llm_provider)
+                          ? formData.llm_provider
+                          : providersWithKeys[0].id,
+                      ).map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="select-chevron"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    className="retry-btn"
+                    onClick={retryGeneration}
+                    disabled={
+                      isGenerating || !formData.project_description.trim()
+                    }
+                  >
+                    <RefreshCw size={15} />
+                    {isGenerating
+                      ? "Generating..."
+                      : generationError
+                        ? "Retry"
+                        : "Regenerate"}
+                  </button>
                 </div>
               )}
 
@@ -795,7 +1122,7 @@ export default styled(GenerateProposal)`
   }
 
   .section {
-    margin-bottom: 50px;
+    margin-bottom: 28px;
   }
 
   .form-row {
@@ -810,6 +1137,108 @@ export default styled(GenerateProposal)`
     @media (max-width: 768px) {
       grid-template-columns: 1fr;
       gap: 20px;
+    }
+  }
+
+  .bid-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 8px;
+  }
+
+  .select-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 1 1 150px;
+    min-width: 150px;
+    max-width: 220px;
+    height: 40px;
+    margin: 0;
+    border: 1px solid #e6e8ec;
+    border-radius: 10px;
+    background: #ffffff;
+
+    &:hover {
+      border-color: #d0d5dd;
+    }
+
+    &:focus-within {
+      border-color: #6296d3;
+    }
+
+    .select-icon {
+      position: absolute;
+      top: 50%;
+      left: 11px;
+      width: 16px;
+      height: 16px;
+      color: #6296d3;
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+
+    .select-chevron {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      width: 16px;
+      height: 16px;
+      color: #98a2b3;
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      height: 38px;
+      min-height: 38px;
+      margin: 0;
+      padding: 0 34px 0 34px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: #4b5563;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 38px;
+      cursor: pointer;
+
+      &:hover,
+      &:focus {
+        border: none;
+        background: transparent;
+        transform: none;
+        outline: none;
+      }
+    }
+  }
+
+  .bid-custom {
+    width: auto;
+    min-width: 132px;
+    max-width: 180px;
+    flex: 1 1 132px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid #e6e8ec;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1c1c1c;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: text;
+
+    &:hover,
+    &:focus {
+      border-color: #d0d5dd;
+      background: #ffffff;
+      transform: none;
     }
   }
 
@@ -1107,11 +1536,16 @@ export default styled(GenerateProposal)`
     align-items: center;
     gap: 10px;
     width: 100%;
-    padding-left: 16px;
+    padding: 0 12px 0 16px;
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 12px;
     background: rgba(0, 0, 0, 0.02);
     box-sizing: border-box;
+
+    &.error {
+      border-color: rgba(255, 77, 79, 0.6);
+      background: rgba(255, 77, 79, 0.05);
+    }
 
     img {
       width: 18px;
@@ -1121,20 +1555,37 @@ export default styled(GenerateProposal)`
     }
 
     select {
+      appearance: none;
+      -webkit-appearance: none;
       flex: 1;
       min-width: 0;
       width: auto;
+      height: 50px;
+      min-height: 50px;
+      margin: 0;
+      padding: 0 8px 0 0;
       border: none;
       background: transparent;
-      padding-left: 0;
-      transform: none;
+      color: #333;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 50px;
+      cursor: pointer;
 
       &:hover,
       &:focus {
         border: none;
         background: transparent;
         transform: none;
+        outline: none;
       }
+    }
+
+    > svg {
+      flex-shrink: 0;
+      color: #98a2b3;
+      pointer-events: none;
     }
   }
 
@@ -1411,10 +1862,6 @@ export default styled(GenerateProposal)`
   }
 
   .generation-error {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
     text-align: center;
     padding: 20px 24px;
     margin-bottom: 24px;
@@ -1426,25 +1873,6 @@ export default styled(GenerateProposal)`
       color: #b91c1c;
       margin: 0;
       font-weight: 600;
-    }
-
-    .retry-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 12px;
-      background: #6296d3;
-      color: #ffffff;
-      font-size: 0.95rem;
-      font-weight: 600;
-      line-height: 1;
-      cursor: pointer;
-
-      &:hover {
-        background: #3969a0;
-      }
     }
   }
 
@@ -1463,13 +1891,93 @@ export default styled(GenerateProposal)`
     }
   }
 
+  .retry-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .retry-providers {
+    display: flex;
+    gap: 6px;
+  }
+
+  .retry-provider {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid #e6e8ec;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #4b5563;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.active {
+      border-color: rgba(98, 150, 211, 0.55);
+      background: rgba(98, 150, 211, 0.12);
+      color: #3969a0;
+    }
+  }
+
+  .retry-model-wrap {
+    flex: 0 1 180px;
+    min-width: 150px;
+    max-width: 220px;
+    height: 36px;
+
+    select {
+      height: 34px;
+      min-height: 34px;
+      padding: 0 32px 0 10px;
+      color: #1c1c1c;
+      font-size: 0.88rem;
+      line-height: 34px;
+    }
+
+    .select-chevron {
+      right: 8px;
+    }
+  }
+
+  .retry-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 10px;
+    background: #6296d3;
+    color: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #3969a0;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+
   @media (max-width: 768px) {
     .container {
       padding: 24px 15px 32px;
     }
 
     .section {
-      margin-bottom: 40px;
+      margin-bottom: 24px;
     }
 
     .generate-btn {
