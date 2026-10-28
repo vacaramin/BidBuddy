@@ -324,8 +324,9 @@ export default styled(History)`
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 1;
+    flex: 1 1 auto;
     height: 44px;
+    min-height: 44px;
     min-width: 0;
     padding: 0 14px;
     border: 1px solid #e6e8ec;

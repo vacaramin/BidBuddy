@@ -262,13 +262,23 @@ const ImportExport = ({ className }) => {
     setMessage({ type: "", text: "" });
   };
 
+  const itemHasData = (storageKey) => {
+    const itemData = getFromStorage(storageKey, null);
+    if (!itemData) return false;
+    return Array.isArray(itemData)
+      ? itemData.length > 0
+      : Object.keys(itemData).length > 0;
+  };
+
+  const canExport = exportItems.some(
+    (item) => selectedExportItems[item.key] && itemHasData(item.storageKey),
+  );
+
   return (
     <div className={className}>
-      <div className="header-section">
-        <p>
-          Backup your configurations and data or restore from a previous backup
-        </p>
-      </div>
+      <header className="page-header">
+        <p>Save a backup of your settings and proposals, or restore one.</p>
+      </header>
 
       {message.text && (
         <div className={`message ${message.type}`}>
@@ -280,7 +290,12 @@ const ImportExport = ({ className }) => {
             )}
             <span>{message.text}</span>
           </div>
-          <button className="message-close" onClick={clearMessage}>
+          <button
+            type="button"
+            className="message-close"
+            onClick={clearMessage}
+            aria-label="Dismiss message"
+          >
             <X size={16} />
           </button>
         </div>
@@ -290,44 +305,40 @@ const ImportExport = ({ className }) => {
         {/* Export Section */}
         <div className="section export-section">
           <div className="section-header">
-            <div className="section-title">
-              <Download size={24} />
-              <h2>Export Configuration</h2>
+            <div className="section-icon">
+              <Download size={18} />
             </div>
-            <p>Select the data you want to include in your backup file</p>
+            <div>
+              <h2>Export</h2>
+              <p>Choose what goes in the backup file.</p>
+            </div>
           </div>
 
           <div className="export-options">
             {exportItems.map((item) => {
               const itemData = getFromStorage(item.storageKey, null);
-              const hasData =
-                itemData &&
-                (Array.isArray(itemData)
-                  ? itemData.length > 0
-                  : Object.keys(itemData).length > 0);
+              const hasData = itemHasData(item.storageKey);
 
               return (
-                <div
+                <label
                   key={item.key}
-                  className={`export-item ${!hasData ? "no-data" : ""}`}
+                  className={`export-item${!hasData ? " no-data" : ""}${
+                    selectedExportItems[item.key] && hasData ? " selected" : ""
+                  }`}
                 >
-                  <label className="export-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedExportItems[item.key] && hasData}
-                      onChange={() => handleExportItemToggle(item.key)}
-                      disabled={!hasData}
-                    />
-                    <span className="checkmark"></span>
-                  </label>
+                  <input
+                    type="checkbox"
+                    checked={selectedExportItems[item.key] && hasData}
+                    onChange={() => handleExportItemToggle(item.key)}
+                    disabled={!hasData}
+                  />
+                  <span className="checkmark"></span>
 
                   <div className="export-item-content">
                     <div className="export-item-header">
                       {item.icon}
                       <h3>{item.label}</h3>
-                      {!hasData && (
-                        <span className="no-data-badge">No Data</span>
-                      )}
+                      {!hasData && <span className="no-data-badge">Empty</span>}
                     </div>
                     <p>{item.description}</p>
 
@@ -335,7 +346,13 @@ const ImportExport = ({ className }) => {
                       <div className="data-preview">
                         {item.key === "proposals" &&
                           Array.isArray(itemData) && (
-                            <span>{itemData.length} proposals saved</span>
+                            <span>
+                              {itemData.length}{" "}
+                              {itemData.length === 1
+                                ? "proposal"
+                                : "proposals"}{" "}
+                              saved
+                            </span>
                           )}
                         {item.key === "settings" && itemData && (
                           <span>
@@ -353,31 +370,32 @@ const ImportExport = ({ className }) => {
                       </div>
                     )}
                   </div>
-                </div>
+                </label>
               );
             })}
           </div>
 
           <button
+            type="button"
             className="export-btn"
             onClick={handleExport}
-            disabled={
-              Object.values(selectedExportItems).every((v) => !v) || !exportData
-            }
+            disabled={!canExport}
           >
-            <Download size={20} />
-            Export Selected Data
+            <Download size={16} />
+            Download backup
           </button>
         </div>
 
         {/* Import Section */}
         <div className="section import-section">
           <div className="section-header">
-            <div className="section-title">
-              <Upload size={24} />
-              <h2>Import Configuration</h2>
+            <div className="section-icon">
+              <Upload size={18} />
             </div>
-            <p>Restore your data from a previously exported backup file</p>
+            <div>
+              <h2>Import</h2>
+              <p>Restore from a backup file.</p>
+            </div>
           </div>
 
           <div className="import-area">
@@ -390,11 +408,13 @@ const ImportExport = ({ className }) => {
                 className="file-input"
               />
               <label htmlFor="import-file" className="file-label">
-                <FileText size={32} />
+                <span className="file-icon">
+                  <FileText size={18} />
+                </span>
                 <div className="file-label-text">
-                  <span className="file-label-title">Choose backup file</span>
+                  <span className="file-label-title">Choose a backup</span>
                   <span className="file-label-subtitle">
-                    Select a JSON file exported from BidBuddy
+                    JSON file exported from Bid buddy
                   </span>
                 </div>
               </label>
@@ -413,11 +433,12 @@ const ImportExport = ({ className }) => {
                 </div>
 
                 <button
+                  type="button"
                   className="preview-btn"
                   onClick={previewImportData}
                   disabled={isProcessing}
                 >
-                  {isProcessing ? "Processing..." : "Preview Import"}
+                  {isProcessing ? "Reading..." : "Preview"}
                 </button>
               </div>
             )}
@@ -475,21 +496,21 @@ const ImportExport = ({ className }) => {
                         {key === "settings" && stats.settings && (
                           <span>
                             {stats.settings.hasPersonalInfo
-                              ? "✓ Personal info"
-                              : "✗ No personal info"}
+                              ? "Personal info"
+                              : "No personal info"}
                             {stats.settings.hasApiKeys
-                              ? " • ✓ API keys"
-                              : " • ✗ No API keys"}
+                              ? " · API keys"
+                              : " · No API keys"}
                             {stats.settings.hasPromptSettings
-                              ? " • ✓ Prompt settings"
-                              : " • ✗ No prompt settings"}
+                              ? " · Prompt settings"
+                              : " · No prompt settings"}
                           </span>
                         )}
                         {key === "analytics" && stats.analytics && (
                           <span>
                             {stats.analytics.hasData
-                              ? "✓ Analytics data available"
-                              : "✗ No analytics data"}
+                              ? "Analytics included"
+                              : "No analytics"}
                           </span>
                         )}
                       </div>
@@ -516,6 +537,7 @@ const ImportExport = ({ className }) => {
 
             <div className="modal-actions">
               <button
+                type="button"
                 className="cancel-btn"
                 onClick={() => setShowPreview(false)}
                 disabled={isProcessing}
@@ -523,18 +545,20 @@ const ImportExport = ({ className }) => {
                 Cancel
               </button>
               <button
-                className="merge-btn"
-                onClick={() => handleImport(true)}
-                disabled={isProcessing}
-              >
-                {isProcessing ? "Importing..." : "Merge Data"}
-              </button>
-              <button
+                type="button"
                 className="replace-btn"
                 onClick={() => handleImport(false)}
                 disabled={isProcessing}
               >
-                {isProcessing ? "Importing..." : "Replace Data"}
+                {isProcessing ? "Importing..." : "Replace"}
+              </button>
+              <button
+                type="button"
+                className="merge-btn"
+                onClick={() => handleImport(true)}
+                disabled={isProcessing}
+              >
+                {isProcessing ? "Importing..." : "Merge"}
               </button>
             </div>
           </div>
@@ -545,626 +569,589 @@ const ImportExport = ({ className }) => {
 };
 
 export default styled(ImportExport)`
-  min-height: calc(100vh - var(--topBarHeight));
-  background: #ffffff;
   box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #ffffff;
 
-  .header-section {
-    margin-bottom: 20px;
-    padding-top: 10px;
+  &,
+  & * {
+    box-sizing: border-box;
+  }
 
-    p {
-      padding: 0px 20px;
-      color: #666;
-      margin: 0;
-      font-size: 1.1rem;
-    }
+  .page-header p {
+    margin: 0;
+    max-width: 40rem;
+    color: #667085;
+    font-size: 0.98rem;
+    line-height: 1.5;
   }
 
   .message {
-    margin: 0 20px 30px 20px;
-    padding: 16px 20px;
-    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
 
     .message-content {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      min-width: 0;
+      font-size: 0.92rem;
       font-weight: 600;
+      line-height: 1.4;
     }
 
     .message-close {
-      background: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      padding: 0;
       border: none;
-      cursor: pointer;
-      opacity: 0.7;
-      padding: 4px;
-      border-radius: 4px;
+      border-radius: 8px;
+      background: transparent;
       color: inherit;
+      cursor: pointer;
 
       &:hover {
-        opacity: 1;
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.45);
       }
     }
 
     &.success {
       background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      color: #047857;
     }
 
     &.error {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #ef4444;
+      background: rgba(185, 28, 28, 0.08);
+      border: 1px solid rgba(185, 28, 28, 0.28);
+      color: #b91c1c;
     }
   }
 
   .main-content {
-    padding: 0 20px;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-
-    @media (max-width: 1024px) {
-      grid-template-columns: 1fr;
-      gap: 50px;
-    }
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
   }
 
   .section {
-    background: rgba(0, 0, 0, 0.02);
-    border: 2px solid rgba(0, 0, 0, 0.1);
-    border-radius: 20px;
-    padding: 30px;
-
-    .section-header {
-      margin-bottom: 30px;
-      text-align: center;
-
-      .section-title {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        margin-bottom: 12px;
-
-        h2 {
-          margin: 0;
-          color: #333;
-          font-size: 1.5rem;
-          font-weight: 700;
-        }
-      }
-
-      p {
-        color: #666;
-        margin: 0;
-        font-size: 1rem;
-        padding: 0;
-      }
-    }
-  }
-
-  /* Export Section */
-  .export-options {
-    margin-bottom: 30px;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #e6e8ec;
+    border-radius: 16px;
+    background: #ffffff;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    h2 {
+      margin: 0;
+      color: #1c1c1c;
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    p {
+      margin: 4px 0 0;
+      color: #667085;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+  }
+
+  .section-icon,
+  .file-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgba(98, 150, 211, 0.12);
+    color: #3969a0;
+  }
+
+  .export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .export-item {
+    position: relative;
     display: flex;
     align-items: flex-start;
-    gap: 16px;
-    padding: 20px;
-    background: white;
-    border: 2px solid rgba(0, 0, 0, 0.1);
+    gap: 12px;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid #e6e8ec;
     border-radius: 12px;
-    transition: all 0.3s ease;
+    background: #ffffff;
+    cursor: pointer;
 
     &:hover:not(.no-data) {
-      border-color: rgba(98, 150, 211, 0.3);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      border-color: rgba(98, 150, 211, 0.55);
+      background: #f7fafd;
+    }
+
+    &.selected {
+      border-color: #6296d3;
+      background: rgba(98, 150, 211, 0.06);
     }
 
     &.no-data {
-      opacity: 0.6;
-      background: rgba(0, 0, 0, 0.02);
+      cursor: default;
+      background: #fafbfc;
     }
 
-    .export-checkbox {
+    input {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      margin: 2px 0 0;
+      opacity: 0;
+    }
+
+    .checkmark {
       position: relative;
-      cursor: pointer;
-      margin-top: 4px;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      border: 1.5px solid #d0d5dd;
+      border-radius: 6px;
+      background: #ffffff;
 
-      input[type="checkbox"] {
-        opacity: 0;
+      &::after {
+        content: "";
         position: absolute;
-        width: 20px;
-        height: 20px;
+        top: 2px;
+        left: 5px;
+        width: 4px;
+        height: 8px;
+        border: solid #ffffff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+        opacity: 0;
       }
+    }
 
-      .checkmark {
-        display: block;
-        width: 20px;
-        height: 20px;
-        background: white;
-        border: 2px solid rgba(0, 0, 0, 0.3);
-        border-radius: 4px;
-        transition: all 0.3s ease;
-        position: relative;
+    input:checked + .checkmark {
+      border-color: #6296d3;
+      background: #6296d3;
 
-        &::after {
-          content: "✓";
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          color: white;
-          font-weight: bold;
-          font-size: 12px;
-          opacity: 0;
-          transition: opacity 0.3s ease;
-        }
+      &::after {
+        opacity: 1;
       }
+    }
 
-      input[type="checkbox"]:checked + .checkmark {
-        background: #6296d3;
-        border-color: #6296d3;
+    input:focus-visible + .checkmark {
+      outline: 2px solid #6296d3;
+      outline-offset: 2px;
+    }
 
-        &::after {
-          opacity: 1;
-        }
-      }
-
-      input[type="checkbox"]:disabled + .checkmark {
-        background: rgba(0, 0, 0, 0.1);
-        border-color: rgba(0, 0, 0, 0.2);
-        cursor: not-allowed;
-      }
+    input:disabled + .checkmark {
+      background: #f3f4f6;
+      border-color: #e6e8ec;
     }
 
     .export-item-content {
       flex: 1;
+      min-width: 0;
+    }
 
-      .export-item-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
+    .export-item-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #3969a0;
 
-        h3 {
-          margin: 0;
-          color: #333;
-          font-size: 1.1rem;
-          font-weight: 600;
-        }
-
-        .no-data-badge {
-          background: rgba(239, 68, 68, 0.1);
-          color: #ef4444;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 0.75rem;
-          font-weight: 600;
-          text-transform: uppercase;
-        }
-      }
-
-      p {
-        color: #666;
-        margin: 0 0 8px 0;
+      h3 {
+        margin: 0;
+        color: #1c1c1c;
         font-size: 0.95rem;
-        line-height: 1.4;
+        font-weight: 700;
+        line-height: 1.3;
       }
+    }
 
-      .data-preview {
-        color: #888;
-        font-size: 0.85rem;
-        font-style: italic;
-      }
+    .no-data-badge {
+      margin-left: auto;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      color: #667085;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    p {
+      margin: 4px 0 0;
+      color: #667085;
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    .data-preview {
+      margin-top: 6px;
+      color: #98a2b3;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  }
+
+  .export-btn,
+  .preview-btn,
+  .merge-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    border-radius: 12px;
+    background: #6296d3;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #3969a0;
+    }
+
+    &:disabled {
+      background: #e6e8ec;
+      color: #98a2b3;
+      cursor: not-allowed;
     }
   }
 
   .export-btn {
+    height: 44px;
     width: 100%;
-    padding: 16px 24px;
-    background: linear-gradient(135deg, #6296d3 0%, #7bb1f1 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    transition: all 0.3s ease;
-
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(98, 150, 211, 0.3);
-    }
-
-    &:disabled {
-      background: rgba(0, 0, 0, 0.1);
-      color: rgba(0, 0, 0, 0.4);
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
   }
 
-  /* Import Section */
   .import-area {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
   }
 
-  .file-upload {
-    .file-input {
-      display: none;
+  .file-input {
+    display: none;
+  }
+
+  .file-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 88px;
+    padding: 16px;
+    border: 1px dashed #d0d5dd;
+    border-radius: 12px;
+    background: #fafbfc;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #6296d3;
+      background: #f7fafd;
     }
+  }
 
-    .file-label {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      padding: 30px;
-      background: white;
-      border: 3px dashed rgba(0, 0, 0, 0.2);
-      border-radius: 16px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-align: left;
+  .file-label-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
 
-      &:hover {
-        border-color: rgba(98, 150, 211, 0.5);
-        background: rgba(98, 150, 211, 0.02);
-        transform: translateY(-2px);
-      }
+  .file-label-title {
+    color: #1c1c1c;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
 
-      .file-label-text {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-
-        .file-label-title {
-          font-size: 1.2rem;
-          font-weight: 600;
-          color: #333;
-        }
-
-        .file-label-subtitle {
-          color: #666;
-          font-size: 0.95rem;
-        }
-      }
-    }
+  .file-label-subtitle {
+    color: #667085;
+    font-size: 0.86rem;
+    line-height: 1.4;
   }
 
   .file-info {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    padding: 16px 20px;
-    background: rgba(98, 150, 211, 0.1);
-    border: 1px solid rgba(98, 150, 211, 0.3);
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid #e6e8ec;
     border-radius: 12px;
+    background: #ffffff;
 
     .file-details {
       display: flex;
       align-items: center;
-      gap: 12px;
-
-      .file-name {
-        font-weight: 600;
-        color: #333;
-      }
-
-      .file-size {
-        color: #666;
-        font-size: 0.9rem;
-      }
+      gap: 10px;
+      min-width: 0;
+      color: #3969a0;
     }
 
-    .preview-btn {
-      padding: 10px 20px;
-      background: #6296d3;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
+    .file-name {
+      color: #1c1c1c;
+      font-size: 0.92rem;
+      font-weight: 700;
+      word-break: break-all;
+    }
 
-      &:hover:not(:disabled) {
-        background: #5285c2;
-        transform: translateY(-1px);
-      }
-
-      &:disabled {
-        background: rgba(0, 0, 0, 0.3);
-        cursor: not-allowed;
-      }
+    .file-size {
+      color: #667085;
+      font-size: 0.8rem;
     }
   }
 
-  /* Modal */
+  .preview-btn {
+    height: 36px;
+    flex-shrink: 0;
+    padding: 0 14px;
+  }
+
   .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    z-index: 1000;
+    inset: 0;
+    z-index: 1100;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
+    background: rgba(28, 28, 28, 0.4);
   }
 
   .modal {
-    background: white;
-    border-radius: 16px;
-    max-width: 600px;
-    width: 100%;
-    max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 560px;
+    max-height: min(80vh, 640px);
+    border: 1px solid #e6e8ec;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
   }
 
   .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 24px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    gap: 12px;
+    padding: 16px 16px 12px 20px;
 
     h3 {
       margin: 0;
-      color: #333;
-      font-size: 1.3rem;
+      color: #1c1c1c;
+      font-size: 1.05rem;
       font-weight: 700;
     }
+  }
 
-    .modal-close {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-      transition: background 0.3s ease;
+  .modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #e6e8ec;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #667085;
+    cursor: pointer;
 
-      &:hover {
-        background: rgba(0, 0, 0, 0.1);
-      }
+    &:hover {
+      background: #f7fafd;
+      color: #1c1c1c;
     }
   }
 
   .modal-content {
-    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 4px 20px 20px;
     overflow-y: auto;
-    flex: 1;
+  }
 
-    .preview-info {
-      margin-bottom: 24px;
+  .preview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f7fafd;
+  }
 
-      .preview-meta {
-        display: flex;
-        gap: 24px;
-        padding: 16px;
-        background: rgba(0, 0, 0, 0.02);
-        border-radius: 8px;
+  .meta-item {
+    color: #667085;
+    font-size: 0.86rem;
 
-        .meta-item {
-          color: #666;
-          font-size: 0.9rem;
+    strong {
+      color: #1c1c1c;
+      font-weight: 700;
+    }
+  }
 
-          strong {
-            color: #333;
-          }
-        }
-      }
+  .preview-data {
+    h4 {
+      margin: 0 0 10px;
+      color: #1c1c1c;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+  }
+
+  .preview-item {
+    padding: 12px 14px;
+    border: 1px solid rgba(98, 150, 211, 0.28);
+    border-radius: 12px;
+    background: rgba(98, 150, 211, 0.06);
+
+    & + & {
+      margin-top: 8px;
+    }
+  }
+
+  .preview-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #3969a0;
+    font-size: 0.92rem;
+    font-weight: 700;
+
+    span {
+      color: #1c1c1c;
+    }
+  }
+
+  .preview-item-details {
+    margin-top: 4px;
+    color: #667085;
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  .import-warning {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    border-radius: 12px;
+    background: rgba(251, 191, 36, 0.12);
+    color: #b45309;
+
+    svg {
+      flex-shrink: 0;
+      margin-top: 1px;
     }
 
-    .preview-data {
-      margin-bottom: 24px;
-
-      h4 {
-        color: #333;
-        margin: 0 0 16px 0;
-        font-size: 1.1rem;
-        font-weight: 600;
-      }
-
-      .preview-item {
-        padding: 12px 16px;
-        background: rgba(98, 150, 211, 0.05);
-        border: 1px solid rgba(98, 150, 211, 0.2);
-        border-radius: 8px;
-        margin-bottom: 12px;
-
-        .preview-item-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-weight: 600;
-          color: #333;
-          margin-bottom: 4px;
-        }
-
-        .preview-item-details {
-          color: #666;
-          font-size: 0.9rem;
-        }
-      }
+    strong {
+      color: #92400e;
     }
 
-    .import-warning {
-      display: flex;
-      gap: 12px;
-      padding: 16px;
-      background: rgba(251, 191, 36, 0.1);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-      border-radius: 8px;
-      color: #d97706;
-
-      div {
-        flex: 1;
-
-        strong {
-          display: block;
-          margin-bottom: 8px;
-        }
-
-        p {
-          margin: 4px 0;
-          font-size: 0.9rem;
-
-          strong {
-            display: inline;
-            margin: 0;
-          }
-        }
-      }
+    p {
+      margin: 4px 0 0;
+      color: #92400e;
+      font-size: 0.84rem;
+      line-height: 1.45;
     }
   }
 
   .modal-actions {
-    padding: 20px 24px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
     display: flex;
-    gap: 12px;
     justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 20px 16px;
+    border-top: 1px solid #e6e8ec;
 
     button {
-      padding: 12px 20px;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-    }
-
-    .cancel-btn {
-      background: rgba(0, 0, 0, 0.1);
-      color: #333;
-
-      &:hover:not(:disabled) {
-        background: rgba(0, 0, 0, 0.2);
-      }
-    }
-
-    .merge-btn {
-      background: rgba(16, 185, 129, 0.9);
-      color: white;
-
-      &:hover:not(:disabled) {
-        background: #10b981;
-        transform: translateY(-1px);
-      }
-    }
-
-    .replace-btn {
-      background: rgba(239, 68, 68, 0.9);
-      color: white;
-
-      &:hover:not(:disabled) {
-        background: #ef4444;
-        transform: translateY(-1px);
-      }
+      height: 40px;
+      padding: 0 14px;
     }
   }
 
-  @media (max-width: 768px) {
+  .cancel-btn,
+  .replace-btn {
+    border: 1px solid #e6e8ec;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1c1c1c;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #f7fafd;
+    }
+
+    &:disabled {
+      color: #98a2b3;
+      cursor: not-allowed;
+    }
+  }
+
+  .replace-btn {
+    border-color: rgba(185, 28, 28, 0.35);
+    color: #b91c1c;
+
+    &:hover:not(:disabled) {
+      background: rgba(185, 28, 28, 0.06);
+    }
+  }
+
+  @media (max-width: 900px) {
     .main-content {
-      padding: 0 15px;
+      grid-template-columns: 1fr;
     }
+  }
 
-    .section {
-      padding: 20px;
-    }
-
-    .export-item {
-      flex-direction: column;
-      gap: 12px;
-
-      .export-checkbox {
-        margin-top: 0;
-      }
-    }
-
+  @media (max-width: 640px) {
     .file-info {
       flex-direction: column;
       align-items: stretch;
-      text-align: center;
-
-      .preview-btn {
-        align-self: stretch;
-      }
     }
 
-    .modal {
-      margin: 20px;
-      max-height: calc(100vh - 40px);
+    .preview-btn {
+      width: 100%;
     }
 
     .modal-actions {
-      flex-direction: column;
+      flex-direction: column-reverse;
 
       button {
         width: 100%;
       }
-    }
-
-    .preview-meta {
-      flex-direction: column !important;
-      gap: 12px !important;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .header-section p {
-    }
-
-    .message {
-      margin: 0 15px 20px 15px;
-      padding: 12px 16px;
-
-      .message-content {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-      }
-    }
-
-    .section .section-title {
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .file-label {
-      flex-direction: column !important;
-      text-align: center;
-      gap: 16px !important;
     }
   }
 `;

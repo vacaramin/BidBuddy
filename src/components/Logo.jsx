@@ -6,10 +6,10 @@ const Logo = ({ className }) => {
     <div className={className}>
       <img
         src={logo}
-        width={"50px"}
-        height={"50px"}
+        width={64}
+        height={64}
         className="logo"
-        alt="logo Instant Bid"
+        alt="Bid buddy logo"
       />
       <h1>Bid buddy</h1>
     </div>
@@ -23,15 +23,19 @@ export default styled(Logo)`
   min-width: 0;
 
   .logo {
+    width: 64px;
+    height: 64px;
     object-fit: contain;
     flex-shrink: 0;
   }
 
   h1 {
     margin: 0;
-    font-size: 1.35rem;
+    color: #1c1c1c;
+    font-size: 1.15rem;
     font-weight: 700;
     line-height: 1.1;
+    letter-spacing: -0.02em;
     white-space: nowrap;
   }
 `;
