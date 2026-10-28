@@ -24,7 +24,7 @@ const navItems = [
 const Sidebar = ({ className, children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [router] = useRouter();
-  const currentPath = router.url;
+  const currentPath = (router?.url || "/").split("?")[0].split("#")[0];
 
   const closeSidebar = () => setIsOpen(false);
 

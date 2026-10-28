@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 import styled from "styled-components";
-import { ChevronDown, X } from "lucide-preact";
+import { ChevronDown, RefreshCw, X } from "lucide-preact";
 import {
   getFromStorage,
   saveToStorage,
@@ -9,6 +9,13 @@ import {
 import { ApiService } from "../utils/apiService";
 import { getDefaultModel, getModels, PROVIDERS } from "../utils/models";
 import ProviderLogo from "../components/ProviderLogo";
+import { Toast, copyText, useToast } from "../components/Toast";
+import { getCurrentUrl, route, useRouter } from "preact-router";
+
+const resultIdFromUrl = (url = getCurrentUrl()) => {
+  const query = (url.split("?")[1] || "").split("#")[0];
+  return new URLSearchParams(query).get("id");
+};
 
 const GenerateProposal = ({ className }) => {
   const [formData, setFormData] = useState({
@@ -23,6 +30,7 @@ const GenerateProposal = ({ className }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedProposal, setGeneratedProposal] = useState("");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [generationError, setGenerationError] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
   const [keyProviderId, setKeyProviderId] = useState(null);
@@ -32,6 +40,10 @@ const GenerateProposal = ({ className }) => {
   const [keyError, setKeyError] = useState("");
   const keyInputRef = useRef(null);
   const descriptionRef = useRef(null);
+  const skipResultClear = useRef(true);
+  const [router] = useRouter();
+  const { toast, showToast } = useToast();
+  const resultId = resultIdFromUrl(router?.url || getCurrentUrl());
 
   const resizeDescription = (element) => {
     if (!element) return;
@@ -55,6 +67,46 @@ const GenerateProposal = ({ className }) => {
     const entry = source?.apiKeys?.find((key) => key.provider === providerId);
     return Boolean(entry?.apiKey?.trim());
   };
+
+  useEffect(() => {
+    if (!resultId) {
+      if (skipResultClear.current) {
+        skipResultClear.current = false;
+        return;
+      }
+      setFormData({
+        project_description: "",
+        llm_model: getDefaultModel("openai"),
+        llm_provider: "openai",
+        additional_notes: "",
+      });
+      setGeneratedProposal("");
+      setGeneratedPrompt("");
+      setGenerationError("");
+      setPromptOpen(false);
+      setShowResults(false);
+      setErrors({});
+      return;
+    }
+
+    skipResultClear.current = false;
+    const saved = getFromStorage(STORAGE_KEYS.PROPOSALS, []);
+    const found = saved.find((item) => String(item.id) === String(resultId));
+    if (!found) return;
+
+    setFormData({
+      project_description: found.project_description || "",
+      additional_notes: found.additional_notes || "",
+      llm_provider: found.llm_provider || "openai",
+      llm_model:
+        found.llm_model || getDefaultModel(found.llm_provider || "openai"),
+    });
+    setGeneratedPrompt(found.prompt_used || "");
+    setGeneratedProposal(found.generated_proposal || "");
+    setGenerationError(found.generation_error || "");
+    setPromptOpen(false);
+    setShowResults(true);
+  }, [resultId]);
 
   useEffect(() => {
     const savedSettings = getFromStorage(STORAGE_KEYS.SETTINGS);
@@ -251,20 +303,56 @@ ${promptSettings.customPromptSuffix || ""}`;
     closeKeyForm();
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  const openSavedResult = (proposalContent, prompt, errorMessage = "", replaceId) => {
+    const existingProposals = getFromStorage(STORAGE_KEYS.PROPOSALS, []);
+    const replaceIndex = replaceId
+      ? existingProposals.findIndex(
+          (item) => String(item.id) === String(replaceId),
+        )
+      : -1;
 
-    const prompt = buildPrompt();
+    if (replaceIndex >= 0) {
+      const next = [...existingProposals];
+      next[replaceIndex] = {
+        ...next[replaceIndex],
+        prompt_used: prompt,
+        generated_proposal: proposalContent || "",
+        generation_error: errorMessage || "",
+      };
+      saveToStorage(STORAGE_KEYS.PROPOSALS, next);
+    } else {
+      const proposal = {
+        id: Date.now().toString(),
+        created_at: new Date().toISOString(),
+        project_description: formData.project_description,
+        additional_notes: formData.additional_notes,
+        llm_provider: formData.llm_provider,
+        llm_model: formData.llm_model,
+        prompt_used: prompt,
+        generated_proposal: proposalContent || "",
+        generation_error: errorMessage || "",
+      };
+      saveToStorage(STORAGE_KEYS.PROPOSALS, [proposal, ...existingProposals]);
+      route(`/proposal?id=${proposal.id}`);
+    }
+
+    setGeneratedProposal(proposalContent || "");
+    setGenerationError(errorMessage || "");
     setGeneratedPrompt(prompt);
+    setPromptOpen(false);
+    setShowResults(true);
+  };
 
+  const generateProposal = async (prompt, replaceId) => {
     const apiKey = getApiKey();
 
     if (!apiKey) {
-      // No API key available, just show the prompt
-      setGeneratedProposal("");
-      setPromptOpen(false);
-      setShowResults(true);
+      openSavedResult(
+        "",
+        prompt,
+        replaceId ? "Add an API key to retry this proposal." : "",
+        replaceId,
+      );
       return;
     }
 
@@ -285,7 +373,6 @@ ${promptSettings.customPromptSuffix || ""}`;
         proposalContent =
           response.choices[0]?.message?.content || "No response generated";
       } else if (formData.llm_provider === "anthropic") {
-        // Convert messages format for Claude
         const claudeMessages = messages.map((msg) => ({
           role: msg.role,
           content: msg.content,
@@ -298,26 +385,15 @@ ${promptSettings.customPromptSuffix || ""}`;
         proposalContent = response.content[0]?.text || "No response generated";
       }
 
-      setGeneratedProposal(proposalContent);
-
-      // Save to history - moved here so proposalContent is available
-      const proposal = {
-        id: Date.now().toString(),
-        created_at: new Date().toISOString(),
-        project_description: formData.project_description,
-        additional_notes: formData.additional_notes,
-        llm_provider: formData.llm_provider,
-        llm_model: formData.llm_model,
-        prompt_used: prompt,
-        generated_proposal: proposalContent, // Use the actual generated content
-      };
-
-      const existingProposals = getFromStorage(STORAGE_KEYS.PROPOSALS, []);
-      saveToStorage(STORAGE_KEYS.PROPOSALS, [proposal, ...existingProposals]);
+      openSavedResult(proposalContent, prompt, "", replaceId);
     } catch (error) {
       console.error("Error generating proposal:", error);
-      const errorMessage = `Error generating proposal: ${error.message}`;
-      setGeneratedProposal(errorMessage);
+      openSavedResult(
+        "",
+        prompt,
+        `Error generating proposal: ${error.message}`,
+        replaceId,
+      );
     } finally {
       setIsGenerating(false);
       setPromptOpen(false);
@@ -325,21 +401,23 @@ ${promptSettings.customPromptSuffix || ""}`;
     }
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const prompt = buildPrompt();
+    setGeneratedPrompt(prompt);
+    await generateProposal(prompt);
+  };
+
+  const retryGeneration = () => {
+    if (!generatedPrompt || isGenerating) return;
+    generateProposal(generatedPrompt, resultId);
+  };
+
   const copyToClipboard = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      alert("Copied to clipboard!");
-    } catch (err) {
-      console.error("Failed to copy text: ", err);
-      // Fallback for older browsers
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-      alert("Copied to clipboard!");
-    }
+    const copied = await copyText(text);
+    showToast(copied ? "Copied" : "Couldn't copy", copied ? "success" : "error");
   };
 
   const resetForm = () => {
@@ -351,9 +429,11 @@ ${promptSettings.customPromptSuffix || ""}`;
     });
     setGeneratedProposal("");
     setGeneratedPrompt("");
+    setGenerationError("");
     setPromptOpen(false);
     setShowResults(false);
     setErrors({});
+    if (getCurrentUrl().includes("?")) route("/proposal");
   };
 
   const hasValidApiKey = () => {
@@ -507,24 +587,30 @@ ${promptSettings.customPromptSuffix || ""}`;
                 </div>
               </div>
 
-              {formData.project_description.trim() && (
-                <div className="submit-section">
-                  <button
-                    type="submit"
-                    className="generate-btn"
-                    disabled={isGenerating}
-                  >
-                    <span className="btn-text">
-                      {isGenerating
-                        ? "Generating..."
-                        : hasValidApiKey()
-                          ? "Generate Proposal"
-                          : "Generate Prompt"}
-                    </span>
-                    <div className="btn-shine"></div>
-                  </button>
-                </div>
-              )}
+              <div
+                className={`submit-section${
+                  formData.project_description.trim() ? " visible" : ""
+                }`}
+              >
+                <button
+                  type="submit"
+                  className="generate-btn"
+                  disabled={
+                    !formData.project_description.trim() || isGenerating
+                  }
+                  tabIndex={formData.project_description.trim() ? 0 : -1}
+                  aria-hidden={!formData.project_description.trim()}
+                >
+                  <span className="btn-text">
+                    {isGenerating
+                      ? "Generating..."
+                      : hasValidApiKey()
+                        ? "Generate Proposal"
+                        : "Generate Prompt"}
+                  </span>
+                  <div className="btn-shine"></div>
+                </button>
+              </div>
             </form>
           </div>
         ) : (
@@ -556,7 +642,21 @@ ${promptSettings.customPromptSuffix || ""}`;
                 </div>
               )}
 
-              {!generatedProposal && (
+              {generationError && (
+                <div className="generation-error">
+                  <p>{generationError}</p>
+                  <button
+                    type="button"
+                    className="retry-btn"
+                    onClick={retryGeneration}
+                  >
+                    <RefreshCw size={16} />
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!generatedProposal && !generationError && (
                 <div className="no-api-message">
                   <p>
                     Add an API key to generate the proposal. You can still copy
@@ -680,6 +780,7 @@ ${promptSettings.customPromptSuffix || ""}`;
           </div>
         </div>
       )}
+      <Toast toast={toast} />
     </div>
   );
 };
@@ -1069,6 +1170,11 @@ export default styled(GenerateProposal)`
     }
   }
 
+  .proposal-form {
+    padding-bottom: 0;
+    transition: padding-bottom 0.2s ease;
+  }
+
   .proposal-form.has-submit {
     padding-bottom: 108px;
   }
@@ -1085,6 +1191,18 @@ export default styled(GenerateProposal)`
     padding: 16px 20px;
     background: #ffffff;
     border-top: 1px solid rgba(0, 0, 0, 0.08);
+    opacity: 0;
+    transform: translateY(100%);
+    pointer-events: none;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+
+    &.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
   }
 
   @media (min-width: 768px) {
@@ -1289,6 +1407,44 @@ export default styled(GenerateProposal)`
       font-family: inherit;
       line-height: 1.6;
       color: #333;
+    }
+  }
+
+  .generation-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    background: rgba(185, 28, 28, 0.08);
+    border-radius: 12px;
+    border: 1px solid rgba(185, 28, 28, 0.28);
+
+    p {
+      color: #b91c1c;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 12px;
+      background: #6296d3;
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+
+      &:hover {
+        background: #3969a0;
+      }
     }
   }
 

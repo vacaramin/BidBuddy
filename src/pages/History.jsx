@@ -1,296 +1,263 @@
 import styled from "styled-components";
-import { useState, useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
+import { Link } from "preact-router";
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  PenLine,
+  Search,
+  Trash2,
+} from "lucide-preact";
 import {
   getFromStorage,
   saveToStorage,
   STORAGE_KEYS,
 } from "../utils/localStorage";
-import { getProvider } from "../utils/models";
+import { getModels, getProvider, PROVIDERS } from "../utils/models";
 import ProviderLogo from "../components/ProviderLogo";
+
+const startOfDay = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const groupLabel = (iso) => {
+  const date = new Date(iso);
+  const diffDays = Math.round(
+    (startOfDay(new Date()) - startOfDay(date)) / 86400000,
+  );
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return "This week";
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+};
+
+const formatWhen = (iso, label) => {
+  const date = new Date(iso);
+  if (label === "Today" || label === "Yesterday") {
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const statusOf = (proposal) => {
+  if (proposal.generation_error) return { label: "Failed", tone: "failed" };
+  if (proposal.generated_proposal) return { label: "Generated", tone: "success" };
+  return { label: "Prompt only", tone: "prompt-only" };
+};
+
+const modelName = (providerId, modelId) =>
+  getModels(providerId).find((model) => model.id === modelId)?.name || modelId;
 
 const History = ({ className }) => {
   const [proposals, setProposals] = useState([]);
-  const [selectedProposal, setSelectedProposal] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterProvider, setFilterProvider] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
-    const savedProposals = getFromStorage(STORAGE_KEYS.PROPOSALS, []);
-    setProposals(savedProposals);
+    setProposals(getFromStorage(STORAGE_KEYS.PROPOSALS, []));
   }, []);
 
   const deleteProposal = (id) => {
-    if (confirm("Are you sure you want to delete this proposal?")) {
-      const updatedProposals = proposals.filter((p) => p.id !== id);
-      setProposals(updatedProposals);
-      saveToStorage(STORAGE_KEYS.PROPOSALS, updatedProposals);
-      setSelectedProposal(null);
-    }
+    if (!confirm("Delete this proposal? This cannot be undone.")) return;
+    const updatedProposals = proposals.filter((proposal) => proposal.id !== id);
+    setProposals(updatedProposals);
+    saveToStorage(STORAGE_KEYS.PROPOSALS, updatedProposals);
   };
 
-  const copyToClipboard = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      // Create a temporary success indicator
-      const button = event.target;
-      const originalText = button.textContent;
-      button.textContent = "Copied!";
-      button.style.background = "rgba(16, 185, 129, 0.1)";
-      button.style.borderColor = "rgba(16, 185, 129, 0.3)";
-      button.style.color = "#10b981";
-
-      setTimeout(() => {
-        button.textContent = originalText;
-        button.style.background = "";
-        button.style.borderColor = "";
-        button.style.color = "";
-      }, 2000);
-    } catch (err) {
-      alert("Failed to copy to clipboard");
-    }
-  };
-
-  // Filter and sort proposals
-  const filteredAndSortedProposals = proposals
+  const filteredProposals = proposals
     .filter((proposal) => {
-      const matchesSearch = proposal.project_description
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      const description = (proposal.project_description || "").toLowerCase();
+      const matchesSearch = description.includes(searchTerm.toLowerCase());
       const matchesProvider =
         filterProvider === "all" || proposal.llm_provider === filterProvider;
       return matchesSearch && matchesProvider;
     })
     .sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return new Date(b.created_at) - new Date(a.created_at);
-        case "oldest":
-          return new Date(a.created_at) - new Date(b.created_at);
-        case "provider":
-          return a.llm_provider.localeCompare(b.llm_provider);
-        default:
-          return 0;
-      }
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
+      return sortBy === "oldest" ? aTime - bTime : bTime - aTime;
     });
 
-  const getProviderName = (provider) => getProvider(provider)?.name || provider;
-
-  const getStatusBadge = (proposal) => {
-    if (proposal.generated_proposal) {
-      return <span className="status-badge success">Generated</span>;
+  const groups = filteredProposals.reduce((list, proposal) => {
+    const label = groupLabel(proposal.created_at);
+    const current = list[list.length - 1];
+    if (!current || current.label !== label) {
+      list.push({ label, items: [proposal] });
+    } else {
+      current.items.push(proposal);
     }
-    return <span className="status-badge prompt-only">Prompt Only</span>;
-  };
+    return list;
+  }, []);
+
+  const filtersActive = searchTerm.trim() !== "" || filterProvider !== "all";
 
   return (
     <div className={className}>
-      <div className="header-section">
-        <p>View and manage all your generated proposals</p>
-      </div>
+      <header className="page-header">
+        <p>Open a saved prompt or proposal, or remove one you no longer need.</p>
+        <Link href="/proposal" className="header-action">
+          <PenLine size={16} />
+          <span>New proposal</span>
+        </Link>
+      </header>
 
       {proposals.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">📝</div>
-          <h3>No proposals yet</h3>
-          <p>Generate your first proposal to see it here!</p>
-          <button
-            className="cta-button"
-            onClick={() => (window.location.href = "/proposal")}
-          >
-            Create Your First Proposal
-          </button>
+          <div className="empty-icon">
+            <FileText size={28} />
+          </div>
+          <h2>No proposals yet</h2>
+          <p>Anything you generate will be listed here.</p>
+          <Link href="/proposal" className="header-action">
+            <PenLine size={16} />
+            <span>New proposal</span>
+          </Link>
         </div>
       ) : (
         <>
-          <div className="controls-section">
-            <div className="search-bar">
+          <div className="toolbar">
+            <label className="search">
+              <Search size={16} />
               <input
-                type="text"
-                placeholder="Search proposals..."
+                type="search"
+                placeholder="Search by description"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
+                onInput={(event) => setSearchTerm(event.target.value)}
               />
-            </div>
-            <div className="filters">
-              <select
-                value={filterProvider}
-                onChange={(e) => setFilterProvider(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">All Providers</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-              </select>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="filter-select"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="provider">By Provider</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="results-info">
-            <span>
-              {filteredAndSortedProposals.length} of {proposals.length}{" "}
-              proposals
-            </span>
-          </div>
-
-          <div className="history-container">
-            <div className="proposals-list">
-              {filteredAndSortedProposals.map((proposal) => (
-                <div
-                  key={proposal.id}
-                  className={`proposal-item ${selectedProposal?.id === proposal.id ? "selected" : ""}`}
-                  onClick={() => setSelectedProposal(proposal)}
+            </label>
+            <div className="toolbar-filters">
+              <label className="filter-select">
+                <select
+                  value={filterProvider}
+                  onChange={(event) => setFilterProvider(event.target.value)}
+                  aria-label="Filter by provider"
                 >
-                  <div className="proposal-header">
-                    <div className="proposal-meta">
-                      <span className="proposal-date">
-                        {new Date(proposal.created_at).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )}
-                      </span>
-                      <span className="proposal-time">
-                        {new Date(proposal.created_at).toLocaleTimeString(
-                          "en-US",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        )}
-                      </span>
-                    </div>
-                    <div className="proposal-badges">
-                      {getStatusBadge(proposal)}
-                      <span className="proposal-provider">
-                        <ProviderLogo
-                          provider={proposal.llm_provider}
-                          size={14}
-                        />
-                        {getProviderName(proposal.llm_provider)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="proposal-description">
-                    {proposal.project_description.substring(0, 120)}
-                    {proposal.project_description.length > 120 && "..."}
-                  </div>
-                  <div className="proposal-footer">
-                    <span className="proposal-model">
-                      {proposal.llm_model.toUpperCase()}
-                    </span>
-                    {proposal.generated_proposal && (
-                      <span className="word-count">
-                        {proposal.generated_proposal.split(" ").length} words
-                      </span>
-                    )}
-                  </div>
-                </div>
+                  <option value="all">All providers</option>
+                  {PROVIDERS.map((provider) => (
+                    <option key={provider.id} value={provider.id}>
+                      {provider.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={16} aria-hidden="true" />
+              </label>
+              <label className="filter-select">
+                <select
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value)}
+                  aria-label="Sort proposals"
+                >
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                </select>
+                <ChevronDown size={16} aria-hidden="true" />
+              </label>
+            </div>
+          </div>
+
+          <p className="results-count">
+            {filtersActive
+              ? `${filteredProposals.length} of ${proposals.length}`
+              : `${proposals.length}`}{" "}
+            {proposals.length === 1 ? "proposal" : "proposals"}
+          </p>
+
+          {filteredProposals.length === 0 ? (
+            <div className="empty-state compact">
+              <h2>No matches</h2>
+              <p>Try a different description or provider.</p>
+              <button
+                type="button"
+                className="text-action"
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterProvider("all");
+                }}
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <div className="groups">
+              {groups.map((group) => (
+                <section key={group.label} className="group">
+                  <h2>{group.label}</h2>
+                  <ul>
+                    {group.items.map((proposal) => {
+                      const status = statusOf(proposal);
+                      const providerName =
+                        getProvider(proposal.llm_provider)?.name ||
+                        proposal.llm_provider;
+                      const words = proposal.generated_proposal
+                        ? proposal.generated_proposal.trim().split(/\s+/).length
+                        : 0;
+
+                      return (
+                        <li key={proposal.id}>
+                          <div className="history-row">
+                            <Link
+                              href={`/proposal?id=${proposal.id}`}
+                              className="row-link"
+                            >
+                              <div className="row-copy">
+                                <p className="row-title">
+                                  {proposal.project_description}
+                                </p>
+                                <p className="row-meta">
+                                  <span className="provider">
+                                    <ProviderLogo
+                                      provider={proposal.llm_provider}
+                                      size={14}
+                                    />
+                                    {providerName}
+                                  </span>
+                                  {proposal.llm_model && (
+                                    <span>
+                                      {modelName(
+                                        proposal.llm_provider,
+                                        proposal.llm_model,
+                                      )}
+                                    </span>
+                                  )}
+                                  <span>
+                                    {formatWhen(
+                                      proposal.created_at,
+                                      group.label,
+                                    )}
+                                  </span>
+                                  {words > 0 && <span>{words} words</span>}
+                                </p>
+                              </div>
+                              <span className={`status ${status.tone}`}>
+                                {status.label}
+                              </span>
+                              <ChevronRight size={18} className="chevron" />
+                            </Link>
+                            <button
+                              type="button"
+                              className="delete-btn"
+                              aria-label="Delete proposal"
+                              onClick={() => deleteProposal(proposal.id)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
               ))}
             </div>
-
-            {selectedProposal && (
-              <div className="proposal-details">
-                <div className="details-header">
-                  <div className="details-title">
-                    <h3>Proposal Details</h3>
-                    <div className="details-meta">
-                      <span>
-                        {new Date(selectedProposal.created_at).toLocaleString()}
-                      </span>
-                      <span className="separator">•</span>
-                      <span>
-                        <ProviderLogo
-                          provider={selectedProposal.llm_provider}
-                          size={14}
-                        />
-                        {getProviderName(selectedProposal.llm_provider)}
-                      </span>
-                      <span className="separator">•</span>
-                      <span>{selectedProposal.llm_model.toUpperCase()}</span>
-                    </div>
-                  </div>
-                  <div className="actions">
-                    <button
-                      className="copy-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyToClipboard(selectedProposal.prompt_used);
-                      }}
-                    >
-                      Copy Prompt
-                    </button>
-                    {selectedProposal.generated_proposal && (
-                      <button
-                        className="copy-btn primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copyToClipboard(selectedProposal.generated_proposal);
-                        }}
-                      >
-                        Copy Proposal
-                      </button>
-                    )}
-                    <button
-                      className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteProposal(selectedProposal.id);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-
-                <div className="details-content">
-                  <div className="detail-section">
-                    <h4>Project Description</h4>
-                    <div className="detail-text">
-                      {selectedProposal.project_description}
-                    </div>
-                  </div>
-
-                  {selectedProposal.additional_notes && (
-                    <div className="detail-section">
-                      <h4>Additional Notes</h4>
-                      <div className="detail-text">
-                        {selectedProposal.additional_notes}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="detail-section">
-                    <h4>Generated Prompt</h4>
-                    <div className="code-text">
-                      <pre>{selectedProposal.prompt_used}</pre>
-                    </div>
-                  </div>
-
-                  {selectedProposal.generated_proposal && (
-                    <div className="detail-section">
-                      <h4>Generated Proposal</h4>
-                      <div className="proposal-text">
-                        <pre>{selectedProposal.generated_proposal}</pre>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </>
       )}
     </div>
@@ -298,509 +265,420 @@ const History = ({ className }) => {
 };
 
 export default styled(History)`
-  min-height: calc(100vh - var(--topBarHeight));
-  background: #ffffff;
   box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #ffffff;
 
-  .header-section {
-    margin-bottom: 20px;
-    padding-top: 10px;
+  &,
+  & * {
+    box-sizing: border-box;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
 
     p {
-      color: #666;
       margin: 0;
-      font-size: 1.1rem;
+      max-width: 40rem;
+      color: #667085;
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+  }
+
+  .header-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 10px 16px;
+    border-radius: 12px;
+    background: #6296d3;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+
+    &:hover {
+      background: #3969a0;
+    }
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    height: 44px;
+    min-width: 0;
+    padding: 0 14px;
+    border: 1px solid #e6e8ec;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #98a2b3;
+
+    &:focus-within {
+      border-color: #6296d3;
+      color: #3969a0;
+    }
+
+    input {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: #1c1c1c;
+      font-size: 0.95rem;
+
+      &:focus {
+        outline: none;
+      }
+    }
+  }
+
+  .toolbar-filters {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .filter-select {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 44px;
+    margin: 0;
+    border: 1px solid #e6e8ec;
+    border-radius: 12px;
+    background: #ffffff;
+
+    &:hover {
+      border-color: #d0d5dd;
+      background: #f8fafc;
+    }
+
+    &:focus-within {
+      border-color: #6296d3;
+      background: #ffffff;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      height: 42px;
+      margin: 0;
+      padding: 0 40px 0 14px;
+      border: none;
+      border-radius: 12px;
+      background: transparent;
+      color: #1c1c1c;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      line-height: 42px;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+      }
+    }
+
+    svg {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      width: 16px;
+      height: 16px;
+      transform: translateY(-50%);
+      color: #667085;
+      pointer-events: none;
+    }
+  }
+
+  .results-count {
+    margin: -8px 0 0;
+    color: #98a2b3;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .groups {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin: 0;
+    padding-bottom: 24px;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    h2 {
+      margin: 0;
+      color: #667085;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    ul {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+  }
+
+  .history-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #e6e8ec;
+    border-radius: 14px;
+    background: #ffffff;
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease;
+
+    &:hover {
+      border-color: rgba(98, 150, 211, 0.55);
+      background: #f7fafd;
+    }
+  }
+
+  .row-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+    padding: 16px 8px 16px 16px;
+    color: inherit;
+    text-decoration: none;
+
+    &:focus-visible {
+      outline: 2px solid #6296d3;
+      outline-offset: 2px;
+      border-radius: 12px;
+    }
+  }
+
+  .row-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .row-title {
+    margin: 0;
+    color: #1c1c1c;
+    font-size: 0.98rem;
+    font-weight: 600;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 0;
+    margin: 6px 0 0;
+    color: #667085;
+    font-size: 0.84rem;
+    line-height: 1.4;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    span:not(:last-child)::after {
+      content: "·";
+      margin: 0 8px;
+      color: #c5cad3;
+    }
+  }
+
+  .provider {
+    gap: 6px;
+
+    img {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
+    }
+  }
+
+  .status {
+    flex-shrink: 0;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+
+    &.success {
+      background: rgba(16, 185, 129, 0.12);
+      color: #047857;
+    }
+
+    &.prompt-only {
+      background: rgba(251, 191, 36, 0.18);
+      color: #b45309;
+    }
+
+    &.failed {
+      background: rgba(185, 28, 28, 0.1);
+      color: #b91c1c;
+    }
+  }
+
+  .chevron {
+    flex-shrink: 0;
+    color: #98a2b3;
+  }
+
+  .row-link:hover .chevron {
+    color: #3969a0;
+  }
+
+  .delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin-right: 10px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #98a2b3;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(185, 28, 28, 0.08);
+      color: #b91c1c;
     }
   }
 
   .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 64px 20px;
     text-align: center;
-    padding: 80px 20px;
-    max-width: 500px;
-    margin: 0 auto;
-    .empty-icon {
-      font-size: 4rem;
-      margin-bottom: 20px;
-      opacity: 0.5;
-    }
 
-    h3 {
-      color: #666;
-      margin-bottom: 12px;
-      font-size: 1.5rem;
+    h2 {
+      margin: 8px 0 0;
+      color: #1c1c1c;
+      font-size: 1.15rem;
+      font-weight: 700;
     }
 
     p {
-      color: #888;
-      margin-bottom: 30px;
-      font-size: 1.1rem;
+      margin: 0 0 12px;
+      color: #667085;
+      font-size: 0.95rem;
     }
 
-    .cta-button {
-      background: linear-gradient(135deg, #6296d3 0%, #7bb1f1 100%);
-      color: white;
-      border: none;
-      padding: 16px 32px;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(98, 150, 211, 0.3);
-      }
+    &.compact {
+      padding: 32px 20px;
+      border: 1px dashed #e6e8ec;
+      border-radius: 14px;
     }
   }
 
-  .controls-section {
-    padding: 0px 20px;
+  .empty-icon {
     display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
     align-items: center;
-    flex-wrap: wrap;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: rgba(98, 150, 211, 0.12);
+    color: #3969a0;
+  }
 
-    .search-bar {
-      flex: 1;
-      min-width: 250px;
+  .text-action {
+    border: none;
+    background: transparent;
+    color: #3969a0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .page-header {
+      align-items: flex-start;
+      flex-direction: column;
     }
 
-    .search-input {
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .toolbar-filters {
       width: 100%;
-      padding: 12px 20px;
-      border: 2px solid rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
-      background: rgba(0, 0, 0, 0.02);
-      font-size: 15px;
-      transition: all 0.3s ease;
-      box-sizing: border-box;
-      color: var(--primaryTextColor);
-
-      &:focus {
-        outline: none;
-        border-color: #6296d3;
-        background: rgba(98, 150, 211, 0.05);
-      }
-    }
-
-    .filters {
-      display: flex;
-      gap: 12px;
     }
 
     .filter-select {
-      padding: 12px 16px;
-      border: 2px solid rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
-      background: rgba(0, 0, 0, 0.02);
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      color: var(--primaryTextColor);
-      &:focus {
-        outline: none;
-        border-color: #6296d3;
-      }
-    }
-  }
-
-  .results-info {
-    padding: 0px 20px;
-    margin-bottom: 20px;
-    color: #666;
-    font-size: 0.95rem;
-    font-weight: 500;
-  }
-
-  .history-container {
-    padding: 0px 20px;
-    display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: 30px;
-    height: calc(100vh - 280px);
-    min-height: 600px;
-
-    @media (max-width: 1200px) {
-      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      min-width: 0;
     }
 
-    @media (max-width: 768px) {
-      grid-template-columns: 1fr;
-      height: auto;
-      gap: 20px;
-    }
-  }
-
-  .proposals-list {
-    padding-top: 20px;
-    border-right: 2px solid rgba(0, 0, 0, 0.1);
-    padding-right: 20px;
-    overflow-y: auto;
-    max-height: 100%;
-
-    /* Custom scrollbar */
-    &::-webkit-scrollbar {
-      width: 6px;
+    .filter-select select {
+      width: 100%;
     }
 
-    &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
-      border-radius: 3px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 3px;
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.3);
-      }
-    }
-
-    @media (max-width: 768px) {
-      border-right: none;
-      border-bottom: 2px solid rgba(0, 0, 0, 0.1);
-      padding-right: 0;
-      padding-bottom: 20px;
-      margin-bottom: 20px;
-      max-height: 400px;
-    }
-  }
-
-  .proposal-item {
-    padding: 20px;
-    border: 2px solid rgba(0, 0, 0, 0.1);
-    border-radius: 16px;
-    margin-bottom: 16px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: rgba(0, 0, 0, 0.02);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-      border-color: rgba(0, 0, 0, 0.2);
-    }
-
-    &.selected {
-      border-color: #6296d3;
-      background: rgba(98, 150, 211, 0.1);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(98, 150, 211, 0.2);
-    }
-
-    .proposal-header {
-      display: flex;
-      justify-content: space-between;
+    .history-row {
       align-items: flex-start;
-      margin-bottom: 12px;
-      gap: 12px;
-
-      .proposal-meta {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-
-        .proposal-date {
-          font-size: 0.9rem;
-          color: #333;
-          font-weight: 600;
-        }
-
-        .proposal-time {
-          font-size: 0.8rem;
-          color: #888;
-        }
-      }
-
-      .proposal-badges {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 8px;
-      }
     }
 
-    .status-badge {
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-
-      &.success {
-        background: rgba(16, 185, 129, 0.2);
-        color: #10b981;
-      }
-
-      &.prompt-only {
-        background: rgba(251, 191, 36, 0.2);
-        color: #d97706;
-      }
+    .row-link {
+      align-items: flex-start;
+      padding-top: 14px;
+      padding-bottom: 14px;
     }
 
-    .proposal-provider {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(0, 0, 0, 0.1);
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: #333;
-
-      img {
-        width: 14px;
-        height: 14px;
-        object-fit: contain;
-      }
-    }
-
-    .proposal-description {
-      color: #333;
-      font-size: 0.95rem;
-      line-height: 1.5;
-      margin-bottom: 12px;
-    }
-
-    .proposal-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.8rem;
-      color: #888;
-
-      .proposal-model {
-        font-weight: 600;
-      }
-
-      .word-count {
-        font-style: italic;
-      }
-    }
-  }
-
-  .proposal-details {
-    padding-top: 20px;
-    overflow-y: auto;
-    max-height: 100%;
-    padding-left: 20px;
-
-    /* Custom scrollbar */
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
-      border-radius: 3px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 3px;
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.3);
-      }
-    }
-
-    @media (max-width: 768px) {
-      padding-left: 0;
-    }
-
-    .details-header {
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid rgba(0, 0, 0, 0.1);
-
-      .details-title {
-        margin-bottom: 20px;
-
-        h3 {
-          margin: 0 0 8px 0;
-          color: #333;
-          font-size: 1.5rem;
-          font-weight: 700;
-        }
-
-        .details-meta {
-          color: #666;
-          font-size: 0.9rem;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-
-          .separator {
-            color: #ccc;
-          }
-
-          img {
-            width: 14px;
-            height: 14px;
-            margin-right: 6px;
-            vertical-align: -2px;
-            object-fit: contain;
-          }
-        }
-      }
-
-      .actions {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-
-        @media (max-width: 768px) {
-          flex-direction: column;
-        }
-      }
-    }
-
-    .copy-btn,
-    .delete-btn {
-      padding: 12px 20px;
-      border: 2px solid rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.05);
-      color: #333;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 0.9rem;
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
-      }
-
-      &.primary {
-        background: linear-gradient(135deg, #6296d3 0%, #7bb1f1 100%);
-        color: white;
-        border-color: #6296d3;
-
-        &:hover {
-          background: linear-gradient(135deg, #5285c2 0%, #6aa0e0 100%);
-          border-color: #5285c2;
-        }
-      }
+    .status {
+      margin-top: 2px;
     }
 
     .delete-btn {
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.3);
-      color: #ef4444;
-
-      &:hover {
-        background: rgba(239, 68, 68, 0.2);
-        border-color: rgba(239, 68, 68, 0.5);
-      }
-    }
-
-    .details-content {
-      .detail-section {
-        margin-bottom: 32px;
-
-        h4 {
-          color: #333;
-          margin-bottom: 16px;
-          font-size: 1.2rem;
-          font-weight: 700;
-        }
-
-        .detail-text {
-          color: #555;
-          line-height: 1.6;
-          padding: 16px 20px;
-          background: rgba(0, 0, 0, 0.03);
-          border-radius: 12px;
-          border-left: 4px solid #6296d3;
-        }
-      }
-
-      .code-text,
-      .proposal-text {
-        background: rgba(0, 0, 0, 0.05);
-        border-radius: 12px;
-        padding: 20px;
-        border: 2px solid rgba(0, 0, 0, 0.1);
-        overflow-x: auto;
-
-        pre {
-          white-space: pre-wrap;
-          word-wrap: break-word;
-          margin: 0;
-          font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
-          line-height: 1.6;
-          color: #333;
-          font-size: 0.9rem;
-        }
-      }
-
-      .proposal-text {
-        background: rgba(98, 150, 211, 0.05);
-        border-color: rgba(98, 150, 211, 0.2);
-
-        pre {
-          font-family: inherit;
-          font-size: 0.95rem;
-        }
-      }
-    }
-  }
-
-  @media (max-width: 768px) {
-    padding: 20px 15px;
-
-    .controls-section {
-      flex-direction: column;
-      align-items: stretch;
-
-      .search-bar {
-        min-width: auto;
-      }
-
-      .filters {
-        justify-content: space-between;
-
-        .filter-select {
-          flex: 1;
-        }
-      }
-    }
-
-    .history-container {
-      min-height: 500px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .proposal-item {
-      padding: 16px;
-
-      .proposal-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-
-        .proposal-badges {
-          flex-direction: row;
-          align-items: center;
-        }
-      }
-    }
-
-    .details-header .actions {
-      gap: 8px;
-
-      button {
-        font-size: 0.8rem;
-        padding: 10px 16px;
-      }
+      margin-top: 8px;
     }
   }
 `;
