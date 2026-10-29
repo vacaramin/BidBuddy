@@ -265,7 +265,7 @@ const History = ({ className }) => {
                                 <p className="row-meta">
                                   <span className="profile-meta">
                                     <ProfileAvatar
-                                      photo={liveProfile?.photo}
+                                      color={liveProfile?.color}
                                       name={profileLabel}
                                       size={14}
                                     />
@@ -594,30 +594,17 @@ export default styled(History)`
       width: 14px;
       height: 14px;
       flex-shrink: 0;
-      object-fit: cover;
       border-radius: 50%;
     }
 
-    .profile-avatar.placeholder {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid #e6e8ec;
-      background: rgba(98, 150, 211, 0.12);
-      color: #3969a0;
-      font-size: 0.55rem;
-      font-weight: 700;
+    .profile-avatar {
+      flex-shrink: 0;
     }
 
-    .provider img {
+    img {
       object-fit: contain;
       border-radius: 0;
     }
-  }
-
-  .provider img {
-    object-fit: contain;
-    border-radius: 0;
   }
 
   .status {

@@ -62,6 +62,21 @@ export const normalizePromptSettings = (saved = {}) => {
 
 export const DEFAULT_PROFILE_NAME = "Personal";
 
+export const PROFILE_COLORS = [
+  "#6296d3",
+  "#3969a0",
+  "#0f766e",
+  "#059669",
+  "#d97706",
+  "#dc2626",
+  "#7c3aed",
+  "#db2777",
+  "#475569",
+  "#0e7490",
+];
+
+export const DEFAULT_PROFILE_COLOR = PROFILE_COLORS[0];
+
 const naturalProfileName = (name, fallbackName = DEFAULT_PROFILE_NAME) => {
   const trimmed = (name || "").trim();
   if (!trimmed || trimmed.toLowerCase() === "default") {
@@ -70,20 +85,22 @@ const naturalProfileName = (name, fallbackName = DEFAULT_PROFILE_NAME) => {
   return trimmed;
 };
 
+export const normalizeProfileColor = (value) => {
+  if (typeof value !== "string") return DEFAULT_PROFILE_COLOR;
+  const color = value.trim().toLowerCase();
+  return PROFILE_COLORS.includes(color) ? color : DEFAULT_PROFILE_COLOR;
+};
+
 export const normalizeProfile = (
   saved,
   fallbackName = DEFAULT_PROFILE_NAME,
 ) => {
   const createdAt = saved?.createdAt || nowIso();
-  const photo =
-    typeof saved?.photo === "string" && saved.photo.startsWith("data:image/")
-      ? saved.photo
-      : "";
   return {
     id: saved?.id || newId(),
     name: naturalProfileName(saved?.name, fallbackName),
     headline: typeof saved?.headline === "string" ? saved.headline.trim() : "",
-    photo,
+    color: normalizeProfileColor(saved?.color),
     personalInfo: normalizePersonalInfo(saved?.personalInfo),
     promptSettings: normalizePromptSettings(saved?.promptSettings),
     createdAt,
@@ -96,43 +113,6 @@ export const profileOptionLabel = (profile) => {
   const headline = profile.headline?.trim();
   return headline ? `${profile.name} — ${headline}` : profile.name;
 };
-
-/** Resize and compress an image file to a data URL for localStorage. */
-export const readProfilePhoto = (file, { maxSize = 256, quality = 0.82 } = {}) =>
-  new Promise((resolve, reject) => {
-    if (!file || !file.type.startsWith("image/")) {
-      reject(new Error("Choose an image file"));
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      reject(new Error("Image must be under 8MB"));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Couldn't read that image"));
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = () => reject(new Error("Couldn't load that image"));
-      image.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-        const width = Math.max(1, Math.round(image.width * scale));
-        const height = Math.max(1, Math.round(image.height * scale));
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Couldn't process that image"));
-          return;
-        }
-        ctx.drawImage(image, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      image.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
 
 const uniqueName = (desired, profiles, excludeId = null) => {
   const base = (desired || "Profile").trim() || "Profile";
@@ -287,7 +267,16 @@ export const isProfileNameTaken = (store, name, excludeId = null) => {
   );
 };
 
-export const createProfile = (store, { name, cloneFromId } = {}) => {
+export const nextAvailableColor = (profiles = []) => {
+  const used = new Set(
+    profiles.map((profile) => normalizeProfileColor(profile.color)),
+  );
+  return (
+    PROFILE_COLORS.find((color) => !used.has(color)) || DEFAULT_PROFILE_COLOR
+  );
+};
+
+export const createProfile = (store, { name, color, cloneFromId } = {}) => {
   const source = cloneFromId ? getProfileById(store, cloneFromId) : null;
   const label = uniqueName(name || (source ? `${source.name} copy` : "Profile"), store.profiles);
   const profile = normalizeProfile(
@@ -295,7 +284,10 @@ export const createProfile = (store, { name, cloneFromId } = {}) => {
       id: newId(),
       name: label,
       headline: source?.headline || "",
-      photo: source?.photo || "",
+      color:
+        color ||
+        source?.color ||
+        nextAvailableColor(store.profiles),
       personalInfo: source ? source.personalInfo : emptyPersonalInfo,
       promptSettings: source ? source.promptSettings : emptyPromptSettings,
       createdAt: nowIso(),

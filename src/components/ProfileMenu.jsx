@@ -3,8 +3,6 @@ import styled from "styled-components";
 import {
   Check,
   ChevronDown,
-  Copy,
-  ImagePlus,
   PenLine,
   Plus,
   Settings,
@@ -20,7 +18,8 @@ import {
   getActiveProfile,
   listProfiles,
   loadStore,
-  readProfilePhoto,
+  nextAvailableColor,
+  PROFILE_COLORS,
   renameProfile,
   setActiveProfileId,
   updateProfile,
@@ -34,8 +33,8 @@ const ProfileMenu = ({ className }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [nameError, setNameError] = useState("");
+  const [colorDraft, setColorDraft] = useState(PROFILE_COLORS[0]);
   const rootRef = useRef(null);
-  const photoInputRef = useRef(null);
   const closeTimerRef = useRef(null);
   const { toast, showToast } = useToast();
 
@@ -91,6 +90,7 @@ const ProfileMenu = ({ className }) => {
   const clearDialogFields = () => {
     setNameDraft("");
     setNameError("");
+    setColorDraft(PROFILE_COLORS[0]);
   };
 
   const closeDialog = () => {
@@ -150,14 +150,16 @@ const ProfileMenu = ({ className }) => {
   const openNew = () => {
     setNameDraft("Profile");
     setNameError("");
+    setColorDraft(nextAvailableColor(store.profiles));
     openDialog({ type: "new" });
   };
 
-  const openRename = () => {
+  const openEdit = () => {
     if (!active) return;
     setNameDraft(active.name);
     setNameError("");
-    openDialog({ type: "rename" });
+    setColorDraft(active.color || PROFILE_COLORS[0]);
+    openDialog({ type: "edit" });
   };
 
   const openDelete = () => {
@@ -174,22 +176,31 @@ const ProfileMenu = ({ className }) => {
       setNameError("Profile name is required");
       return;
     }
-    const { store: next, profile } = createProfile(store, { name: label });
+    const { store: next, profile } = createProfile(store, {
+      name: label,
+      color: colorDraft,
+    });
     setStore(next);
     closeDialog();
     showToast(`Created ${profile.name}`);
   };
 
-  const confirmRename = () => {
+  const confirmEdit = () => {
     if (!active) return;
-    const { store: next, error } = renameProfile(store, active.id, nameDraft);
+    const label = nameDraft.trim();
+    if (!label) {
+      setNameError("Profile name is required");
+      return;
+    }
+    const { store: renamed, error } = renameProfile(store, active.id, label);
     if (error) {
       setNameError(error);
       return;
     }
+    const next = updateProfile(renamed, active.id, { color: colorDraft });
     setStore(next);
     closeDialog();
-    showToast("Profile renamed");
+    showToast("Profile updated");
   };
 
   const confirmDelete = () => {
@@ -205,48 +216,8 @@ const ProfileMenu = ({ className }) => {
     showToast("Profile deleted");
   };
 
-  const handleDuplicate = () => {
-    if (!active) return;
-    const { store: next, profile } = createProfile(store, {
-      cloneFromId: active.id,
-    });
-    setStore(next);
-    setOpen(false);
-    showToast(`Duplicated as ${profile.name}`);
-  };
-
-  const handlePhotoPick = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !active) return;
-    try {
-      const dataUrl = await readProfilePhoto(file);
-      const next = updateProfile(store, active.id, { photo: dataUrl });
-      setStore(next);
-      setOpen(false);
-      showToast("Photo updated");
-    } catch (error) {
-      showToast(error.message || "Couldn't use that image", "error");
-    }
-  };
-
-  const clearPhoto = () => {
-    if (!active?.photo) return;
-    const next = updateProfile(store, active.id, { photo: "" });
-    setStore(next);
-    setOpen(false);
-    showToast("Photo removed");
-  };
-
   return (
     <div className={className} ref={rootRef}>
-      <input
-        ref={photoInputRef}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={handlePhotoPick}
-      />
       <button
         type="button"
         className={`menu-trigger${open ? " open" : ""}`}
@@ -254,7 +225,7 @@ const ProfileMenu = ({ className }) => {
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <ProfileAvatar photo={active?.photo} name={active?.name} size={32} />
+        <ProfileAvatar color={active?.color} name={active?.name} size={32} />
         <span className="trigger-copy">
           <span className="trigger-name">{active?.name || "Profile"}</span>
           {active?.headline ? (
@@ -273,7 +244,7 @@ const ProfileMenu = ({ className }) => {
         >
           <div className="menu-heading">
             <ProfileAvatar
-              photo={active?.photo}
+              color={active?.color}
               name={active?.name}
               size={40}
             />
@@ -297,7 +268,7 @@ const ProfileMenu = ({ className }) => {
                     onClick={() => switchProfile(profile.id)}
                   >
                     <ProfileAvatar
-                      photo={profile.photo}
+                      color={profile.color}
                       name={profile.name}
                       size={28}
                     />
@@ -333,39 +304,10 @@ const ProfileMenu = ({ className }) => {
             type="button"
             role="menuitem"
             className="menu-action"
-            onClick={() => photoInputRef.current?.click()}
-          >
-            <ImagePlus size={16} />
-            {active?.photo ? "Change photo" : "Add photo"}
-          </button>
-          {active?.photo ? (
-            <button
-              type="button"
-              role="menuitem"
-              className="menu-action"
-              onClick={clearPhoto}
-            >
-              <Trash2 size={16} />
-              Remove photo
-            </button>
-          ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            className="menu-action"
-            onClick={handleDuplicate}
-          >
-            <Copy size={16} />
-            Duplicate profile
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="menu-action"
-            onClick={openRename}
+            onClick={openEdit}
           >
             <PenLine size={16} />
-            Rename profile
+            Edit profile
           </button>
           <button
             type="button"
@@ -407,11 +349,11 @@ const ProfileMenu = ({ className }) => {
             aria-labelledby="profile-menu-dialog-title"
             onClick={(event) => event.stopPropagation()}
           >
-            {(dialog.type === "new" || dialog.type === "rename") && (
+            {(dialog.type === "new" || dialog.type === "edit") && (
               <>
                 <div className="modal-header">
                   <h2 id="profile-menu-dialog-title">
-                    {dialog.type === "new" ? "Add profile" : "Rename profile"}
+                    {dialog.type === "new" ? "Add profile" : "Edit profile"}
                   </h2>
                   <button
                     type="button"
@@ -421,6 +363,14 @@ const ProfileMenu = ({ className }) => {
                   >
                     <X size={16} />
                   </button>
+                </div>
+                <div className="color-preview">
+                  <ProfileAvatar
+                    color={colorDraft}
+                    name={nameDraft.trim() || "Profile"}
+                    size={48}
+                  />
+                  <span>{nameDraft.trim() || "Profile"}</span>
                 </div>
                 <label className="field" htmlFor="profile-menu-name">
                   <span>Profile name</span>
@@ -437,12 +387,38 @@ const ProfileMenu = ({ className }) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
                         if (dialog.type === "new") confirmNew();
-                        else confirmRename();
+                        else confirmEdit();
                       }
                     }}
                   />
                 </label>
                 {nameError && <p className="field-error">{nameError}</p>}
+                <div className="field">
+                  <span>Profile color</span>
+                  <div
+                    className="color-palette"
+                    role="radiogroup"
+                    aria-label="Profile color"
+                  >
+                    {PROFILE_COLORS.map((swatch) => {
+                      const selected = colorDraft === swatch;
+                      return (
+                        <button
+                          key={swatch}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          aria-label={`Color ${swatch}`}
+                          className={`color-swatch${selected ? " selected" : ""}`}
+                          style={{ background: swatch }}
+                          onClick={() => setColorDraft(swatch)}
+                        >
+                          {selected ? <Check size={14} /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <div className="modal-actions">
                   <button
                     type="button"
@@ -454,9 +430,9 @@ const ProfileMenu = ({ className }) => {
                   <button
                     type="button"
                     className="primary-btn"
-                    onClick={dialog.type === "new" ? confirmNew : confirmRename}
+                    onClick={dialog.type === "new" ? confirmNew : confirmEdit}
                   >
-                    {dialog.type === "new" ? "Create profile" : "Save name"}
+                    {dialog.type === "new" ? "Create profile" : "Save profile"}
                   </button>
                 </div>
               </>
@@ -497,6 +473,7 @@ const ProfileMenu = ({ className }) => {
                 </div>
               </>
             )}
+
           </div>
         </div>
       )}
@@ -535,17 +512,50 @@ export default styled(ProfileMenu)`
 
   .profile-avatar {
     flex-shrink: 0;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #e6e8ec;
-    background: rgba(98, 150, 211, 0.12);
-    color: #3969a0;
-    font-size: 0.75rem;
-    font-weight: 700;
+  }
+
+  .color-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+
+    > span {
+      color: #1c1c1c;
+      font-size: 0.95rem;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .color-palette {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .color-swatch {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    color: #ffffff;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+
+    &:hover {
+      transform: scale(1.04);
+    }
+
+    &.selected {
+      border-color: #1c1c1c;
+      box-shadow: 0 0 0 2px rgba(28, 28, 28, 0.12);
+    }
   }
 
   .trigger-copy {
@@ -618,7 +628,7 @@ export default styled(ProfileMenu)`
     border-bottom: 1px solid #e6e8ec;
     margin-bottom: 6px;
 
-    strong {
+    > div strong {
       display: block;
       color: #1c1c1c;
       font-size: 0.95rem;
@@ -626,7 +636,7 @@ export default styled(ProfileMenu)`
       line-height: 1.25;
     }
 
-    span {
+    > div span {
       display: block;
       margin-top: 2px;
       color: #667085;

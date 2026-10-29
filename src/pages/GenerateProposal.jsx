@@ -18,13 +18,10 @@ import { getDefaultModel, getModels, PROVIDERS } from "../utils/models";
 import {
   getActiveProfile,
   getProfileById,
-  listProfiles,
   loadStore,
-  profileOptionLabel,
   setActiveProfileId,
   updateApiKeys,
 } from "../utils/profiles";
-import ProfileAvatar from "../components/ProfileAvatar";
 import ProviderLogo from "../components/ProviderLogo";
 import { Toast, copyText, useToast } from "../components/Toast";
 import { getCurrentUrl, route, useRouter } from "preact-router";
@@ -143,9 +140,6 @@ const resolveBidValue = (value, custom, options) => {
 
 const GenerateProposal = ({ className }) => {
   const [store, setStore] = useState(() => loadStore());
-  const [selectedProfileId, setSelectedProfileId] = useState(
-    () => loadStore().activeProfileId,
-  );
   const [formData, setFormData] = useState(() => createEmptyForm(loadStore()));
 
   const [errors, setErrors] = useState({});
@@ -166,9 +160,6 @@ const GenerateProposal = ({ className }) => {
   const [router] = useRouter();
   const { toast, showToast } = useToast();
   const resultId = resultIdFromUrl(router?.url || getCurrentUrl());
-  const profiles = listProfiles(store);
-  const selectedProfile =
-    getProfileById(store, selectedProfileId) || getActiveProfile(store);
 
   const resizeDescription = (element) => {
     if (!element) return;
@@ -193,16 +184,6 @@ const GenerateProposal = ({ className }) => {
     return Boolean(entry?.apiKey?.trim());
   };
 
-  const chooseProfile = (profileId, { persist = true } = {}) => {
-    const profile = getProfileById(store, profileId);
-    if (!profile) return;
-    setSelectedProfileId(profile.id);
-    if (persist) {
-      const next = setActiveProfileId(store, profile.id);
-      setStore(next);
-    }
-  };
-
   useEffect(() => {
     if (!resultId) {
       if (skipResultClear.current) {
@@ -211,7 +192,6 @@ const GenerateProposal = ({ className }) => {
       }
       const nextStore = loadStore();
       setStore(nextStore);
-      setSelectedProfileId(nextStore.activeProfileId);
       setFormData(createEmptyForm(nextStore));
       setGeneratedProposal("");
       setGeneratedPrompt("");
@@ -233,14 +213,9 @@ const GenerateProposal = ({ className }) => {
       ? getProfileById(nextStore, found.profileId)
       : null;
     if (tagged) {
-      setSelectedProfileId(tagged.id);
       setStore(setActiveProfileId(nextStore, tagged.id));
-    } else {
-      const fallback = getActiveProfile(nextStore);
-      setSelectedProfileId(fallback.id);
-      if (found.profileId) {
-        showToast("Original profile was deleted", "error");
-      }
+    } else if (found.profileId) {
+      showToast("Original profile was deleted", "error");
     }
 
     setFormData({
@@ -267,24 +242,18 @@ const GenerateProposal = ({ className }) => {
   }, [resultId]);
 
   useEffect(() => {
-    const syncStore = (preferActiveProfile = false) => {
+    const syncStore = () => {
       const nextStore = loadStore();
       setStore(nextStore);
       if (resultIdFromUrl()) return;
-      if (
-        preferActiveProfile ||
-        !getProfileById(nextStore, selectedProfileId)
-      ) {
-        setSelectedProfileId(nextStore.activeProfileId);
-      }
       setFormData((prev) => ({
         ...prev,
         ...resolvePreferredLlm(nextStore),
       }));
     };
 
-    syncStore(true);
-    const onChange = () => syncStore(true);
+    syncStore();
+    const onChange = () => syncStore();
     window.addEventListener("bidbuddy:profiles-changed", onChange);
     return () =>
       window.removeEventListener("bidbuddy:profiles-changed", onChange);
@@ -363,8 +332,7 @@ const GenerateProposal = ({ className }) => {
   };
 
   const buildPrompt = () => {
-    const profile =
-      getProfileById(store, selectedProfileId) || getActiveProfile(store);
+    const profile = getActiveProfile(store);
     const personalInfo = profile?.personalInfo || {};
     const promptSettings = profile?.promptSettings || {};
 
@@ -531,8 +499,7 @@ ${promptSettings.customPromptSuffix || ""}`;
       model: formData.llm_model,
     });
 
-    const profile =
-      getProfileById(store, selectedProfileId) || getActiveProfile(store);
+    const profile = getActiveProfile(store);
     const profileId = profile?.id || "";
     const profileName = profile?.name || "";
 
@@ -682,7 +649,6 @@ ${promptSettings.customPromptSuffix || ""}`;
   const resetForm = () => {
     const nextStore = loadStore();
     setStore(nextStore);
-    setSelectedProfileId(nextStore.activeProfileId);
     setFormData(createEmptyForm(nextStore));
     setGeneratedProposal("");
     setGeneratedPrompt("");
@@ -867,31 +833,6 @@ ${promptSettings.customPromptSuffix || ""}`;
               </div>
 
               <div className="section">
-                {profiles.length > 0 && (
-                  <div className="form-group profile-field">
-                    <label htmlFor="profile_select">Profile</label>
-                    <div className="input-wrapper model-field profile-select-field">
-                      <ProfileAvatar
-                        photo={selectedProfile?.photo}
-                        name={selectedProfile?.name}
-                        size={22}
-                      />
-                      <select
-                        id="profile_select"
-                        value={selectedProfile?.id || ""}
-                        onChange={(e) => chooseProfile(e.target.value)}
-                      >
-                        {profiles.map((profile) => (
-                          <option key={profile.id} value={profile.id}>
-                            {profileOptionLabel(profile)}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={16} aria-hidden="true" />
-                    </div>
-                  </div>
-                )}
-
                 <div
                   className={`form-row ${
                     providerHasKey(formData.llm_provider) ? "" : "providers-only"
@@ -1056,33 +997,6 @@ ${promptSettings.customPromptSuffix || ""}`;
 
               {providersWithKeys.length > 0 && (
                 <div className="retry-bar">
-                  {profiles.length > 0 && (
-                    <label className="select-wrap retry-profile-wrap">
-                      <ProfileAvatar
-                        photo={selectedProfile?.photo}
-                        name={selectedProfile?.name}
-                        size={20}
-                        className="retry-profile-avatar"
-                      />
-                      <select
-                        aria-label="Profile"
-                        value={selectedProfile?.id || ""}
-                        onChange={(e) => chooseProfile(e.target.value)}
-                      >
-                        {profiles.map((profile) => (
-                          <option key={profile.id} value={profile.id}>
-                            {profileOptionLabel(profile)}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown
-                        className="select-chevron"
-                        size={16}
-                        aria-hidden="true"
-                      />
-                    </label>
-                  )}
-
                   {providersWithKeys.length > 1 && (
                     <div
                       className="retry-providers"
@@ -1709,27 +1623,11 @@ export default styled(GenerateProposal)`
       background: rgba(255, 77, 79, 0.05);
     }
 
-    > img:not(.profile-avatar) {
+    img {
       width: 18px;
       height: 18px;
       flex-shrink: 0;
       object-fit: contain;
-    }
-
-    .profile-avatar {
-      flex-shrink: 0;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid #e6e8ec;
-      background: rgba(98, 150, 211, 0.12);
-      color: #3969a0;
-      font-size: 0.7rem;
-      font-weight: 700;
-      line-height: 1;
-      overflow: hidden;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
     }
 
     select {
@@ -2103,8 +2001,7 @@ export default styled(GenerateProposal)`
     }
   }
 
-  .retry-model-wrap,
-  .retry-profile-wrap {
+  .retry-model-wrap {
     flex: 0 1 180px;
     min-width: 150px;
     max-width: 220px;
@@ -2122,41 +2019,6 @@ export default styled(GenerateProposal)`
     .select-chevron {
       right: 8px;
     }
-  }
-
-  .retry-profile-wrap {
-    flex: 0 1 220px;
-    max-width: 260px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding-left: 6px;
-
-    select {
-      padding-left: 4px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .retry-profile-avatar,
-    .profile-avatar {
-      flex-shrink: 0;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid #e6e8ec;
-      background: rgba(98, 150, 211, 0.12);
-      color: #3969a0;
-      font-size: 0.65rem;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-  }
-
-  .profile-field {
-    margin-bottom: 4px;
   }
 
   .retry-btn {

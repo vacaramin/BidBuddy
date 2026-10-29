@@ -13,7 +13,6 @@ import {
 import { getCurrentUrl, route, useRouter } from "preact-router";
 import { PROVIDERS } from "../utils/models";
 import ProviderLogo from "../components/ProviderLogo";
-import ProfileAvatar from "../components/ProfileAvatar";
 import { Toast, useToast } from "../components/Toast";
 import {
   emptyPersonalInfo,
@@ -73,10 +72,6 @@ const Settings = ({ className }) => {
     const initial = loadStore();
     return getProfileById(initial, initial.activeProfileId)?.headline || "";
   });
-  const [draftPhoto, setDraftPhoto] = useState(() => {
-    const initial = loadStore();
-    return getProfileById(initial, initial.activeProfileId)?.photo || "";
-  });
   const [errors, setErrors] = useState({});
   const [dialog, setDialog] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -97,7 +92,6 @@ const Settings = ({ className }) => {
     setDraftPersonal({ ...emptyPersonalInfo, ...profile.personalInfo });
     setDraftPrompt({ ...emptyPromptSettings, ...profile.promptSettings });
     setDraftHeadline(profile.headline || "");
-    setDraftPhoto(profile.photo || "");
     setErrors({});
   };
 
@@ -139,7 +133,6 @@ const Settings = ({ className }) => {
     }
     const next = updateProfile(store, selectedProfile.id, {
       headline: draftHeadline,
-      photo: draftPhoto,
       personalInfo: draftPersonal,
       promptSettings: draftPrompt,
     });
@@ -304,21 +297,6 @@ const Settings = ({ className }) => {
       </div>
 
       {activeTab === "personal" && (
-        <>
-          <section className="card profile-preview-card">
-            <div className="profile-preview">
-              <ProfileAvatar
-                photo={draftPhoto}
-                name={selectedProfile?.name || draftPersonal.name}
-                size={64}
-              />
-              <div className="profile-preview-copy">
-                <strong>{selectedProfile?.name || "Profile"}</strong>
-                {draftHeadline ? <span>{draftHeadline}</span> : null}
-              </div>
-            </div>
-          </section>
-
           <section className="card">
             <div className="form-grid">
               <Field
@@ -390,7 +368,6 @@ const Settings = ({ className }) => {
               />
             </div>
           </section>
-        </>
       )}
 
       {activeTab === "api" && (
@@ -811,57 +788,6 @@ export default styled(Settings)`
     color: #667085;
     font-size: 0.98rem;
     line-height: 1.5;
-  }
-
-  .profile-avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #e6e8ec;
-    background: #ffffff;
-    color: #3969a0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    line-height: 1;
-    overflow: hidden;
-
-    &.placeholder {
-      background: rgba(98, 150, 211, 0.12);
-    }
-  }
-
-  .profile-preview-card {
-    padding: 16px 20px;
-  }
-
-  .profile-preview {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-width: 0;
-  }
-
-  .profile-preview-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-
-    strong {
-      color: #1c1c1c;
-      font-size: 1.05rem;
-      font-weight: 700;
-      line-height: 1.3;
-    }
-
-    span {
-      color: #667085;
-      font-size: 0.9rem;
-      line-height: 1.35;
-    }
   }
 
   .tabs {
