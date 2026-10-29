@@ -1,16 +1,17 @@
 import { Link } from "preact-router";
 import styled from "styled-components";
 import { History, KeyRound, PenLine, Shield } from "lucide-preact";
+import Github from "@/assets/icons/github.svg";
 
 const steps = [
   {
-    title: "Set up your profile",
-    text: "Add your name and links, then save a ChatGPT or Claude key.",
+    title: "Set up your profiles",
+    text: "Add one or more freelancer profiles, then save a shared ChatGPT or Claude key.",
     href: "/settings",
   },
   {
     title: "Write from a job post",
-    text: "Paste the description, pick a model, and generate a draft.",
+    text: "Paste the description, pick a profile and model, and generate a draft.",
     href: "/proposal",
   },
   {
@@ -24,7 +25,7 @@ const points = [
   {
     icon: <PenLine size={18} />,
     title: "Drafts you can edit",
-    text: "Each proposal uses your profile, a word target, and any prompt prefix or suffix you set.",
+    text: "Each proposal uses the profile you select, a word target, and that profile’s prompt prefix or suffix.",
   },
   {
     icon: <KeyRound size={18} />,
@@ -39,7 +40,7 @@ const points = [
   {
     icon: <Shield size={18} />,
     title: "A backup when you need it",
-    text: "Export proposals, settings, and analytics, then bring them back on another browser.",
+    text: "Export proposals, profiles, and analytics, then bring them back on another browser.",
   },
 ];
 
@@ -88,9 +89,26 @@ const About = ({ className }) => {
       <section className="panel">
         <h2>Where your data lives</h2>
         <p>
-          Proposals, settings, and API keys stay in this browser. A key is sent
-          only when you generate, and only to the provider you selected.
+          Proposals, profiles, and shared API keys stay in this browser. A key is
+          sent only when you generate, and only to the provider you selected.
         </p>
+      </section>
+
+      <section className="panel contribute-panel">
+        <h2>Want to contribute?</h2>
+        <p>
+          BidBuddy is open source. Ideas, fixes, and pull requests are welcome on
+          GitHub.
+        </p>
+        <a
+          href="https://github.com/vacaramin/InstantBids"
+          target="_blank"
+          rel="noreferrer"
+          className="github-contribute"
+        >
+          <img className="github-icon" src={Github} alt="" />
+          <span>Contribute on GitHub</span>
+        </a>
       </section>
     </div>
   );
@@ -209,5 +227,35 @@ export default styled(About)`
     color: #667085;
     font-size: 0.92rem;
     line-height: 1.45;
+  }
+
+  .contribute-panel {
+    align-items: flex-start;
+  }
+
+  .github-contribute {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    background: #6296d3;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background: #3969a0;
+    }
+  }
+
+  .github-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1);
   }
 `;

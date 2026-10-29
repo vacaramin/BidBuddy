@@ -15,6 +15,14 @@ import {
   STORAGE_KEYS,
 } from "../utils/localStorage";
 import { getModels, getProvider, PROVIDERS } from "../utils/models";
+import {
+  getProfileById,
+  listProfiles,
+  loadStore,
+  profileOptionLabel,
+  resolveProfileLabel,
+} from "../utils/profiles";
+import ProfileAvatar from "../components/ProfileAvatar";
 import ProviderLogo from "../components/ProviderLogo";
 
 const startOfDay = (date) =>
@@ -57,13 +65,18 @@ const modelName = (providerId, modelId) =>
 
 const History = ({ className }) => {
   const [proposals, setProposals] = useState([]);
+  const [store, setStore] = useState(() => loadStore());
   const [searchTerm, setSearchTerm] = useState("");
   const [filterProvider, setFilterProvider] = useState("all");
+  const [filterProfile, setFilterProfile] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
     setProposals(getFromStorage(STORAGE_KEYS.PROPOSALS, []));
+    setStore(loadStore());
   }, []);
+
+  const profiles = listProfiles(store);
 
   const deleteProposal = (id) => {
     if (!confirm("Delete this proposal? This cannot be undone.")) return;
@@ -78,7 +91,14 @@ const History = ({ className }) => {
       const matchesSearch = description.includes(searchTerm.toLowerCase());
       const matchesProvider =
         filterProvider === "all" || proposal.llm_provider === filterProvider;
-      return matchesSearch && matchesProvider;
+      const profileMissing =
+        !proposal.profileId || !getProfileById(store, proposal.profileId);
+      const matchesProfile =
+        filterProfile === "all" ||
+        (filterProfile === "deleted" && profileMissing) ||
+        (filterProfile !== "deleted" &&
+          proposal.profileId === filterProfile);
+      return matchesSearch && matchesProvider && matchesProfile;
     })
     .sort((a, b) => {
       const aTime = new Date(a.created_at).getTime();
@@ -97,7 +117,10 @@ const History = ({ className }) => {
     return list;
   }, []);
 
-  const filtersActive = searchTerm.trim() !== "" || filterProvider !== "all";
+  const filtersActive =
+    searchTerm.trim() !== "" ||
+    filterProvider !== "all" ||
+    filterProfile !== "all";
 
   return (
     <div className={className}>
@@ -134,6 +157,22 @@ const History = ({ className }) => {
               />
             </label>
             <div className="toolbar-filters">
+              <label className="filter-select">
+                <select
+                  value={filterProfile}
+                  onChange={(event) => setFilterProfile(event.target.value)}
+                  aria-label="Filter by profile"
+                >
+                  <option value="all">All profiles</option>
+                  {profiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profileOptionLabel(profile)}
+                    </option>
+                  ))}
+                  <option value="deleted">Deleted profiles</option>
+                </select>
+                <ChevronDown size={16} aria-hidden="true" />
+              </label>
               <label className="filter-select">
                 <select
                   value={filterProvider}
@@ -173,13 +212,14 @@ const History = ({ className }) => {
           {filteredProposals.length === 0 ? (
             <div className="empty-state compact">
               <h2>No matches</h2>
-              <p>Try a different description or provider.</p>
+              <p>Try a different description, profile, or provider.</p>
               <button
                 type="button"
                 className="text-action"
                 onClick={() => {
                   setSearchTerm("");
                   setFilterProvider("all");
+                  setFilterProfile("all");
                 }}
               >
                 Clear filters
@@ -196,6 +236,17 @@ const History = ({ className }) => {
                       const providerName =
                         getProvider(proposal.llm_provider)?.name ||
                         proposal.llm_provider;
+                      const liveProfile = getProfileById(
+                        store,
+                        proposal.profileId,
+                      );
+                      const profileLabel = liveProfile
+                        ? profileOptionLabel(liveProfile)
+                        : resolveProfileLabel(
+                            store,
+                            proposal.profileId,
+                            proposal.profileName,
+                          );
                       const words = proposal.generated_proposal
                         ? proposal.generated_proposal.trim().split(/\s+/).length
                         : 0;
@@ -212,6 +263,14 @@ const History = ({ className }) => {
                                   {proposal.project_description}
                                 </p>
                                 <p className="row-meta">
+                                  <span className="profile-meta">
+                                    <ProfileAvatar
+                                      photo={liveProfile?.photo}
+                                      name={profileLabel}
+                                      size={14}
+                                    />
+                                    {profileLabel}
+                                  </span>
                                   <span className="provider">
                                     <ProviderLogo
                                       provider={proposal.llm_provider}
@@ -526,14 +585,39 @@ export default styled(History)`
     }
   }
 
-  .provider {
+  .provider,
+  .profile-meta {
     gap: 6px;
 
-    img {
+    img,
+    .profile-avatar {
       width: 14px;
       height: 14px;
-      object-fit: contain;
+      flex-shrink: 0;
+      object-fit: cover;
+      border-radius: 50%;
     }
+
+    .profile-avatar.placeholder {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #e6e8ec;
+      background: rgba(98, 150, 211, 0.12);
+      color: #3969a0;
+      font-size: 0.55rem;
+      font-weight: 700;
+    }
+
+    .provider img {
+      object-fit: contain;
+      border-radius: 0;
+    }
+  }
+
+  .provider img {
+    object-fit: contain;
+    border-radius: 0;
   }
 
   .status {

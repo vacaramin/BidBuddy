@@ -179,8 +179,8 @@ const Home = ({ className }) => {
             <Link href="/settings" className="step">
               <span className="step-number">1</span>
               <span className="step-content">
-                <strong>Configure settings</strong>
-                <span>Add your profile and API keys.</span>
+                <strong>Profile setup</strong>
+                <span>Add profiles and API keys.</span>
               </span>
             </Link>
             <Link href="/proposal" className="step">

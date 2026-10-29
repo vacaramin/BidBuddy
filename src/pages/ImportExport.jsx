@@ -16,6 +16,13 @@ import {
   saveToStorage,
   STORAGE_KEYS,
 } from "../utils/localStorage";
+import {
+  DEFAULT_PROFILE_NAME,
+  getActiveProfile,
+  loadStore,
+  normalizeStore,
+  saveStore,
+} from "../utils/profiles";
 
 const ImportExport = ({ className }) => {
   const [exportData, setExportData] = useState(null);
@@ -33,9 +40,9 @@ const ImportExport = ({ className }) => {
   const exportItems = [
     {
       key: "settings",
-      label: "Settings & Configuration",
+      label: "Profile setup",
       icon: <Settings size={16} />,
-      description: "Personal info, API keys, and prompt settings",
+      description: "Profiles, shared API keys, and prompt settings",
       storageKey: STORAGE_KEYS.SETTINGS,
     },
     {
@@ -68,7 +75,10 @@ const ImportExport = ({ className }) => {
 
     exportItems.forEach((item) => {
       if (selectedExportItems[item.key]) {
-        const itemData = getFromStorage(item.storageKey, null);
+        const itemData =
+          item.key === "settings"
+            ? loadStore()
+            : getFromStorage(item.storageKey, null);
         if (itemData) {
           data.data[item.key] = itemData;
         }
@@ -199,8 +209,10 @@ const ImportExport = ({ className }) => {
             });
 
             saveToStorage(exportItem.storageKey, merged);
+          } else if (key === "settings") {
+            saveStore(normalizeStore(value));
           } else {
-            // For settings and analytics, or replace mode, overwrite completely
+            // For analytics, or replace mode, overwrite completely
             saveToStorage(exportItem.storageKey, value);
           }
           importedCount++;
@@ -233,10 +245,18 @@ const ImportExport = ({ className }) => {
     const stats = {};
 
     if (data.settings) {
+      const normalized = normalizeStore(data.settings);
+      const active = getActiveProfile(normalized);
       stats.settings = {
-        hasPersonalInfo: !!data.settings.personalInfo?.name,
-        hasApiKeys: data.settings.apiKeys?.some((key) => key.apiKey) || false,
-        hasPromptSettings: !!data.settings.promptSettings,
+        profileCount: normalized.profiles.length,
+        activeName: active?.name || DEFAULT_PROFILE_NAME,
+        hasApiKeys:
+          normalized.apiKeys?.some((key) => key.apiKey?.trim()) || false,
+        hasPromptSettings: normalized.profiles.some(
+          (profile) =>
+            profile.promptSettings?.customPromptPrefix ||
+            profile.promptSettings?.customPromptSuffix,
+        ),
       };
     }
 
@@ -262,7 +282,11 @@ const ImportExport = ({ className }) => {
     setMessage({ type: "", text: "" });
   };
 
-  const itemHasData = (storageKey) => {
+  const itemHasData = (key, storageKey) => {
+    if (key === "settings") {
+      const store = loadStore();
+      return store.profiles.length > 0;
+    }
     const itemData = getFromStorage(storageKey, null);
     if (!itemData) return false;
     return Array.isArray(itemData)
@@ -271,7 +295,8 @@ const ImportExport = ({ className }) => {
   };
 
   const canExport = exportItems.some(
-    (item) => selectedExportItems[item.key] && itemHasData(item.storageKey),
+    (item) =>
+      selectedExportItems[item.key] && itemHasData(item.key, item.storageKey),
   );
 
   return (
@@ -316,8 +341,22 @@ const ImportExport = ({ className }) => {
 
           <div className="export-options">
             {exportItems.map((item) => {
-              const itemData = getFromStorage(item.storageKey, null);
-              const hasData = itemHasData(item.storageKey);
+              const itemData =
+                item.key === "settings"
+                  ? loadStore()
+                  : getFromStorage(item.storageKey, null);
+              const hasData = itemHasData(item.key, item.storageKey);
+              const settingsStats =
+                item.key === "settings" && itemData
+                  ? {
+                      count: itemData.profiles?.length || 0,
+                      active:
+                        getActiveProfile(itemData)?.name || DEFAULT_PROFILE_NAME,
+                      hasKeys:
+                        itemData.apiKeys?.some((key) => key.apiKey?.trim()) ||
+                        false,
+                    }
+                  : null;
 
               return (
                 <label
@@ -354,14 +393,15 @@ const ImportExport = ({ className }) => {
                               saved
                             </span>
                           )}
-                        {item.key === "settings" && itemData && (
+                        {item.key === "settings" && settingsStats && (
                           <span>
-                            {itemData.personalInfo?.name
-                              ? "Personal info configured"
-                              : "No personal info"}
-                            {itemData.apiKeys?.some((k) => k.apiKey)
-                              ? " • API keys set"
-                              : " • No API keys"}
+                            {settingsStats.count}{" "}
+                            {settingsStats.count === 1 ? "profile" : "profiles"}
+                            {" · Active: "}
+                            {settingsStats.active}
+                            {settingsStats.hasKeys
+                              ? " · API keys set"
+                              : " · No API keys"}
                           </span>
                         )}
                         {item.key === "analytics" && itemData && (
@@ -495,9 +535,12 @@ const ImportExport = ({ className }) => {
                         )}
                         {key === "settings" && stats.settings && (
                           <span>
-                            {stats.settings.hasPersonalInfo
-                              ? "Personal info"
-                              : "No personal info"}
+                            {stats.settings.profileCount}{" "}
+                            {stats.settings.profileCount === 1
+                              ? "profile"
+                              : "profiles"}
+                            {" · Active: "}
+                            {stats.settings.activeName}
                             {stats.settings.hasApiKeys
                               ? " · API keys"
                               : " · No API keys"}

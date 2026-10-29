@@ -19,7 +19,7 @@ const navItems = [
   { name: "Generate Proposal", icon: <Notebook size={18} />, path: "/proposal" },
   { name: "History", icon: <History size={18} />, path: "/history" },
   { name: "Import/Export", icon: <Import size={18} />, path: "/import-export" },
-  { name: "Settings", icon: <Settings size={18} />, path: "/settings" },
+  { name: "Profile setup", icon: <Settings size={18} />, path: "/settings" },
 ];
 
 const footerItems = [

@@ -3,6 +3,7 @@ export const STORAGE_KEYS = {
   PROPOSALS: "bidbuddy_proposals",
   ANALYTICS: "bidbuddy_analytics",
   WELCOME_DISMISSED: "bidbuddy_welcome_dismissed",
+  LAST_LLM: "bidbuddy_last_llm",
 };
 
 export const getFromStorage = (key, defaultValue = null) => {

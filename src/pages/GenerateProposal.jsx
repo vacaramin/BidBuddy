@@ -15,6 +15,16 @@ import {
 } from "../utils/localStorage";
 import { ApiService } from "../utils/apiService";
 import { getDefaultModel, getModels, PROVIDERS } from "../utils/models";
+import {
+  getActiveProfile,
+  getProfileById,
+  listProfiles,
+  loadStore,
+  profileOptionLabel,
+  setActiveProfileId,
+  updateApiKeys,
+} from "../utils/profiles";
+import ProfileAvatar from "../components/ProfileAvatar";
 import ProviderLogo from "../components/ProviderLogo";
 import { Toast, copyText, useToast } from "../components/Toast";
 import { getCurrentUrl, route, useRouter } from "preact-router";
@@ -65,10 +75,56 @@ const emptyBidFields = {
   includeStart: false,
 };
 
-const createEmptyForm = () => ({
+const resolvePreferredLlm = (store) => {
+  const stored = getFromStorage(STORAGE_KEYS.LAST_LLM, null);
+  const latestProposal = getFromStorage(STORAGE_KEYS.PROPOSALS, [])[0];
+  const last =
+    stored?.provider
+      ? stored
+      : latestProposal?.llm_provider
+        ? {
+            provider: latestProposal.llm_provider,
+            model: latestProposal.llm_model,
+          }
+        : null;
+  const providerIds = PROVIDERS.map((provider) => provider.id);
+  const hasKey = (providerId) =>
+    Boolean(
+      store?.apiKeys?.find(
+        (key) => key.provider === providerId && key.apiKey?.trim(),
+      ),
+    );
+
+  if (
+    last?.provider &&
+    providerIds.includes(last.provider) &&
+    (!store || hasKey(last.provider))
+  ) {
+    const models = getModels(last.provider);
+    const model =
+      models.find((item) => item.id === last.model)?.id ||
+      getDefaultModel(last.provider);
+    return { llm_provider: last.provider, llm_model: model };
+  }
+
+  const openaiReady = hasKey("openai");
+  const claudeReady = hasKey("anthropic");
+  if (store && !openaiReady && claudeReady) {
+    return {
+      llm_provider: "anthropic",
+      llm_model: getDefaultModel("anthropic"),
+    };
+  }
+
+  return {
+    llm_provider: "openai",
+    llm_model: getDefaultModel("openai"),
+  };
+};
+
+const createEmptyForm = (store) => ({
   project_description: "",
-  llm_model: getDefaultModel("openai"),
-  llm_provider: "openai",
+  ...resolvePreferredLlm(store),
   additional_notes: "",
   ...emptyBidFields,
 });
@@ -86,9 +142,12 @@ const resolveBidValue = (value, custom, options) => {
 };
 
 const GenerateProposal = ({ className }) => {
-  const [formData, setFormData] = useState(createEmptyForm);
+  const [store, setStore] = useState(() => loadStore());
+  const [selectedProfileId, setSelectedProfileId] = useState(
+    () => loadStore().activeProfileId,
+  );
+  const [formData, setFormData] = useState(() => createEmptyForm(loadStore()));
 
-  const [settings, setSettings] = useState(null);
   const [errors, setErrors] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedProposal, setGeneratedProposal] = useState("");
@@ -107,6 +166,9 @@ const GenerateProposal = ({ className }) => {
   const [router] = useRouter();
   const { toast, showToast } = useToast();
   const resultId = resultIdFromUrl(router?.url || getCurrentUrl());
+  const profiles = listProfiles(store);
+  const selectedProfile =
+    getProfileById(store, selectedProfileId) || getActiveProfile(store);
 
   const resizeDescription = (element) => {
     if (!element) return;
@@ -126,9 +188,19 @@ const GenerateProposal = ({ className }) => {
     resizeDescription(descriptionRef.current);
   }, [formData.project_description]);
 
-  const providerHasKey = (providerId, source = settings) => {
+  const providerHasKey = (providerId, source = store) => {
     const entry = source?.apiKeys?.find((key) => key.provider === providerId);
     return Boolean(entry?.apiKey?.trim());
+  };
+
+  const chooseProfile = (profileId, { persist = true } = {}) => {
+    const profile = getProfileById(store, profileId);
+    if (!profile) return;
+    setSelectedProfileId(profile.id);
+    if (persist) {
+      const next = setActiveProfileId(store, profile.id);
+      setStore(next);
+    }
   };
 
   useEffect(() => {
@@ -137,7 +209,10 @@ const GenerateProposal = ({ className }) => {
         skipResultClear.current = false;
         return;
       }
-      setFormData(createEmptyForm());
+      const nextStore = loadStore();
+      setStore(nextStore);
+      setSelectedProfileId(nextStore.activeProfileId);
+      setFormData(createEmptyForm(nextStore));
       setGeneratedProposal("");
       setGeneratedPrompt("");
       setGenerationError("");
@@ -148,12 +223,28 @@ const GenerateProposal = ({ className }) => {
     }
 
     skipResultClear.current = false;
+    const nextStore = loadStore();
+    setStore(nextStore);
     const saved = getFromStorage(STORAGE_KEYS.PROPOSALS, []);
     const found = saved.find((item) => String(item.id) === String(resultId));
     if (!found) return;
 
+    const tagged = found.profileId
+      ? getProfileById(nextStore, found.profileId)
+      : null;
+    if (tagged) {
+      setSelectedProfileId(tagged.id);
+      setStore(setActiveProfileId(nextStore, tagged.id));
+    } else {
+      const fallback = getActiveProfile(nextStore);
+      setSelectedProfileId(fallback.id);
+      if (found.profileId) {
+        showToast("Original profile was deleted", "error");
+      }
+    }
+
     setFormData({
-      ...createEmptyForm(),
+      ...createEmptyForm(nextStore),
       project_description: found.project_description || "",
       additional_notes: found.additional_notes || "",
       llm_provider: found.llm_provider || "openai",
@@ -176,25 +267,27 @@ const GenerateProposal = ({ className }) => {
   }, [resultId]);
 
   useEffect(() => {
-    const savedSettings = getFromStorage(STORAGE_KEYS.SETTINGS);
-    setSettings(savedSettings);
-    const openaiReady = Boolean(
-      savedSettings?.apiKeys?.find(
-        (key) => key.provider === "openai" && key.apiKey?.trim(),
-      ),
-    );
-    const claudeReady = Boolean(
-      savedSettings?.apiKeys?.find(
-        (key) => key.provider === "anthropic" && key.apiKey?.trim(),
-      ),
-    );
-    if (!openaiReady && claudeReady) {
+    const syncStore = (preferActiveProfile = false) => {
+      const nextStore = loadStore();
+      setStore(nextStore);
+      if (resultIdFromUrl()) return;
+      if (
+        preferActiveProfile ||
+        !getProfileById(nextStore, selectedProfileId)
+      ) {
+        setSelectedProfileId(nextStore.activeProfileId);
+      }
       setFormData((prev) => ({
         ...prev,
-        llm_provider: "anthropic",
-        llm_model: getDefaultModel("anthropic"),
+        ...resolvePreferredLlm(nextStore),
       }));
-    }
+    };
+
+    syncStore(true);
+    const onChange = () => syncStore(true);
+    window.addEventListener("bidbuddy:profiles-changed", onChange);
+    return () =>
+      window.removeEventListener("bidbuddy:profiles-changed", onChange);
   }, []);
 
   useEffect(() => {
@@ -270,8 +363,10 @@ const GenerateProposal = ({ className }) => {
   };
 
   const buildPrompt = () => {
-    const personalInfo = settings?.personalInfo || {};
-    const promptSettings = settings?.promptSettings || {};
+    const profile =
+      getProfileById(store, selectedProfileId) || getActiveProfile(store);
+    const personalInfo = profile?.personalInfo || {};
+    const promptSettings = profile?.promptSettings || {};
 
     const deadlineText = resolveBidValue(
       formData.deadline,
@@ -346,6 +441,7 @@ ${
 }
 
 ${personalInfo.name ? `My name is ${personalInfo.name}.` : ""}
+${profile?.headline ? `My headline / role: ${profile.headline}.` : ""}
 ${personalInfo.portfolioUrl ? `Portfolio: ${personalInfo.portfolioUrl}` : ""}
 ${personalInfo.githubUrl ? `GitHub: ${personalInfo.githubUrl}` : ""}
 ${personalInfo.linkedinUrl ? `LinkedIn: ${personalInfo.linkedinUrl}` : ""}
@@ -356,7 +452,7 @@ ${promptSettings.customPromptSuffix || ""}`;
   };
 
   const getApiKey = () => {
-    const entry = settings?.apiKeys?.find(
+    const entry = store?.apiKeys?.find(
       (key) => key.provider === formData.llm_provider,
     );
     return entry?.apiKey?.trim() || null;
@@ -404,52 +500,42 @@ ${promptSettings.customPromptSuffix || ""}`;
       return;
     }
 
-    const current = settings || {};
-    const personalInfo = {
-      name: "",
-      email: "",
-      phone: "",
-      githubUrl: "",
-      linkedinUrl: "",
-      portfolioUrl: "",
-      ...(current.personalInfo || {}),
-    };
-    const storedPrompt = current.promptSettings || {};
-    const promptSettings = {
-      customPromptPrefix: "",
-      customPromptSuffix: "",
-      maxWords: 500,
-      ...storedPrompt,
-      includeEmail: storedPrompt.includeEmail === true,
-      includePhone: storedPrompt.includePhone === true,
-    };
-    const apiKeys = Array.isArray(current.apiKeys) ? [...current.apiKeys] : [];
-    const index = apiKeys.findIndex((key) => key.provider === provider.id);
-    if (index >= 0) {
-      apiKeys[index] = { ...apiKeys[index], apiKey: value, isValid: true };
-    } else {
-      apiKeys.push({
-        id: Date.now(),
-        provider: provider.id,
-        name: provider.name,
-        apiKey: value,
-        isValid: true,
-      });
-    }
-    const nextSettings = {
-      ...current,
-      personalInfo,
-      promptSettings,
-      apiKeys,
-    };
-    saveToStorage(STORAGE_KEYS.SETTINGS, nextSettings);
-    setSettings(nextSettings);
+    const apiKeys = (store.apiKeys || []).map((key) =>
+      key.provider === provider.id
+        ? { ...key, name: provider.name, apiKey: value, isValid: true }
+        : key,
+    );
+    const hasProvider = apiKeys.some((key) => key.provider === provider.id);
+    const nextKeys = hasProvider
+      ? apiKeys
+      : [
+          ...apiKeys,
+          {
+            id: provider.id,
+            provider: provider.id,
+            name: provider.name,
+            apiKey: value,
+            isValid: true,
+          },
+        ];
+    const nextStore = updateApiKeys(store, nextKeys);
+    setStore(nextStore);
     handleInputChange("llm_provider", provider.id);
     handleInputChange("llm_model", provider.defaultModel);
     closeKeyForm();
   };
 
   const openSavedResult = (proposalContent, prompt, errorMessage = "", replaceId) => {
+    saveToStorage(STORAGE_KEYS.LAST_LLM, {
+      provider: formData.llm_provider,
+      model: formData.llm_model,
+    });
+
+    const profile =
+      getProfileById(store, selectedProfileId) || getActiveProfile(store);
+    const profileId = profile?.id || "";
+    const profileName = profile?.name || "";
+
     const existingProposals = getFromStorage(STORAGE_KEYS.PROPOSALS, []);
     const replaceIndex = replaceId
       ? existingProposals.findIndex(
@@ -461,6 +547,8 @@ ${promptSettings.customPromptSuffix || ""}`;
       const next = [...existingProposals];
       next[replaceIndex] = {
         ...next[replaceIndex],
+        profileId,
+        profileName,
         llm_provider: formData.llm_provider,
         llm_model: formData.llm_model,
         deadline: formData.deadline,
@@ -482,6 +570,8 @@ ${promptSettings.customPromptSuffix || ""}`;
         created_at: new Date().toISOString(),
         project_description: formData.project_description,
         additional_notes: formData.additional_notes,
+        profileId,
+        profileName,
         llm_provider: formData.llm_provider,
         llm_model: formData.llm_model,
         deadline: formData.deadline,
@@ -590,7 +680,10 @@ ${promptSettings.customPromptSuffix || ""}`;
   };
 
   const resetForm = () => {
-    setFormData(createEmptyForm());
+    const nextStore = loadStore();
+    setStore(nextStore);
+    setSelectedProfileId(nextStore.activeProfileId);
+    setFormData(createEmptyForm(nextStore));
     setGeneratedProposal("");
     setGeneratedPrompt("");
     setGenerationError("");
@@ -774,6 +867,31 @@ ${promptSettings.customPromptSuffix || ""}`;
               </div>
 
               <div className="section">
+                {profiles.length > 0 && (
+                  <div className="form-group profile-field">
+                    <label htmlFor="profile_select">Profile</label>
+                    <div className="input-wrapper model-field profile-select-field">
+                      <ProfileAvatar
+                        photo={selectedProfile?.photo}
+                        name={selectedProfile?.name}
+                        size={22}
+                      />
+                      <select
+                        id="profile_select"
+                        value={selectedProfile?.id || ""}
+                        onChange={(e) => chooseProfile(e.target.value)}
+                      >
+                        {profiles.map((profile) => (
+                          <option key={profile.id} value={profile.id}>
+                            {profileOptionLabel(profile)}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} aria-hidden="true" />
+                    </div>
+                  </div>
+                )}
+
                 <div
                   className={`form-row ${
                     providerHasKey(formData.llm_provider) ? "" : "providers-only"
@@ -938,6 +1056,33 @@ ${promptSettings.customPromptSuffix || ""}`;
 
               {providersWithKeys.length > 0 && (
                 <div className="retry-bar">
+                  {profiles.length > 0 && (
+                    <label className="select-wrap retry-profile-wrap">
+                      <ProfileAvatar
+                        photo={selectedProfile?.photo}
+                        name={selectedProfile?.name}
+                        size={20}
+                        className="retry-profile-avatar"
+                      />
+                      <select
+                        aria-label="Profile"
+                        value={selectedProfile?.id || ""}
+                        onChange={(e) => chooseProfile(e.target.value)}
+                      >
+                        {profiles.map((profile) => (
+                          <option key={profile.id} value={profile.id}>
+                            {profileOptionLabel(profile)}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        className="select-chevron"
+                        size={16}
+                        aria-hidden="true"
+                      />
+                    </label>
+                  )}
+
                   {providersWithKeys.length > 1 && (
                     <div
                       className="retry-providers"
@@ -1564,11 +1709,27 @@ export default styled(GenerateProposal)`
       background: rgba(255, 77, 79, 0.05);
     }
 
-    img {
+    > img:not(.profile-avatar) {
       width: 18px;
       height: 18px;
       flex-shrink: 0;
       object-fit: contain;
+    }
+
+    .profile-avatar {
+      flex-shrink: 0;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #e6e8ec;
+      background: rgba(98, 150, 211, 0.12);
+      color: #3969a0;
+      font-size: 0.7rem;
+      font-weight: 700;
+      line-height: 1;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     select {
@@ -1942,7 +2103,8 @@ export default styled(GenerateProposal)`
     }
   }
 
-  .retry-model-wrap {
+  .retry-model-wrap,
+  .retry-profile-wrap {
     flex: 0 1 180px;
     min-width: 150px;
     max-width: 220px;
@@ -1960,6 +2122,41 @@ export default styled(GenerateProposal)`
     .select-chevron {
       right: 8px;
     }
+  }
+
+  .retry-profile-wrap {
+    flex: 0 1 220px;
+    max-width: 260px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 6px;
+
+    select {
+      padding-left: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .retry-profile-avatar,
+    .profile-avatar {
+      flex-shrink: 0;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #e6e8ec;
+      background: rgba(98, 150, 211, 0.12);
+      color: #3969a0;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+  }
+
+  .profile-field {
+    margin-bottom: 4px;
   }
 
   .retry-btn {
