@@ -6,8 +6,8 @@ const Logo = ({ className }) => {
     <div className={className}>
       <img
         src={logo}
-        width={64}
-        height={64}
+        width={36}
+        height={36}
         className="logo"
         alt="Bid buddy logo"
       />
@@ -21,10 +21,11 @@ export default styled(Logo)`
   align-items: center;
   gap: 10px;
   min-width: 0;
+  height: 100%;
 
   .logo {
-    width: 64px;
-    height: 64px;
+    width: 36px;
+    height: 36px;
     object-fit: contain;
     flex-shrink: 0;
   }
@@ -32,7 +33,7 @@ export default styled(Logo)`
   h1 {
     margin: 0;
     color: #1c1c1c;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 700;
     line-height: 1.1;
     letter-spacing: -0.02em;

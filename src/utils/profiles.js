@@ -325,6 +325,31 @@ export const updateProfile = (store, id, patch = {}) => {
   return saveStore({ ...store, profiles });
 };
 
+/** Clears personal info + prompt settings only. Shared API keys are untouched. */
+export const resetProfile = (store, id) => {
+  const profile = getProfileById(store, id);
+  if (!profile) return store;
+
+  const profiles = store.profiles.map((item) => {
+    if (item.id !== id) return item;
+    return normalizeProfile(
+      {
+        ...item,
+        personalInfo: { ...emptyPersonalInfo },
+        promptSettings: { ...emptyPromptSettings },
+        updatedAt: nowIso(),
+      },
+      item.name,
+    );
+  });
+
+  return saveStore({
+    activeProfileId: store.activeProfileId,
+    apiKeys: store.apiKeys,
+    profiles,
+  });
+};
+
 export const renameProfile = (store, id, name) => {
   const trimmed = (name || "").trim();
   if (!trimmed) {

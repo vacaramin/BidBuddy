@@ -27,7 +27,6 @@ export default styled(Topbar)`
   width: 100%;
   min-width: 0;
   flex: 1;
-  max-height: var(--topBarHeight);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -37,7 +36,7 @@ export default styled(Topbar)`
     margin: 0;
     min-width: 0;
     color: #1c1c1c;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: -0.02em;
@@ -48,7 +47,7 @@ export default styled(Topbar)`
 
   @media (max-width: 767px) {
     .page-title {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
   }
 `;

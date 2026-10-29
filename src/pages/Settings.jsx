@@ -20,6 +20,7 @@ import {
   getActiveProfile,
   getProfileById,
   loadStore,
+  resetProfile,
   updateApiKeys,
   updateProfile,
   validatePersonalInfo,
@@ -78,6 +79,8 @@ const Settings = ({ className }) => {
   const [keyDraft, setKeyDraft] = useState("");
   const [keyError, setKeyError] = useState("");
   const closeTimerRef = useRef(null);
+  const prefixRef = useRef(null);
+  const suffixRef = useRef(null);
   const [router] = useRouter();
   const activeTab = tabFromUrl(router?.url || getCurrentUrl());
   const { toast, showToast } = useToast();
@@ -86,6 +89,20 @@ const Settings = ({ className }) => {
   const dialogProvider = PROVIDERS.find(
     (item) => item.id === dialog?.providerId,
   );
+
+  const resizeTextarea = (element) => {
+    if (!element) return;
+    const current = element.offsetHeight;
+    element.style.transition = "none";
+    element.style.height = "auto";
+    const border = element.offsetHeight - element.clientHeight;
+    const next = element.scrollHeight + border;
+    element.style.height = `${current}px`;
+    element.style.transition = "";
+    requestAnimationFrame(() => {
+      element.style.height = `${next}px`;
+    });
+  };
 
   const syncDraftFromProfile = (profile) => {
     if (!profile) return;
@@ -108,6 +125,16 @@ const Settings = ({ className }) => {
     return () =>
       window.removeEventListener("bidbuddy:profiles-changed", onChange);
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "prompts") return;
+    resizeTextarea(prefixRef.current);
+    resizeTextarea(suffixRef.current);
+  }, [
+    activeTab,
+    draftPrompt.customPromptPrefix,
+    draftPrompt.customPromptSuffix,
+  ]);
 
   const setActiveTab = (tab) => {
     const next = SETTINGS_TABS.includes(tab) ? tab : "personal";
@@ -206,10 +233,7 @@ const Settings = ({ className }) => {
 
   const confirmResetProfile = () => {
     if (!selectedProfile) return;
-    const next = updateProfile(store, selectedProfile.id, {
-      personalInfo: emptyPersonalInfo,
-      promptSettings: emptyPromptSettings,
-    });
+    const next = resetProfile(store, selectedProfile.id);
     setStore(next);
     syncDraftFromProfile(getProfileById(next, selectedProfile.id));
     closeDialog();
@@ -455,7 +479,9 @@ const Settings = ({ className }) => {
           <label className="field">
             <span>Opening</span>
             <textarea
+              ref={prefixRef}
               rows={3}
+              className="auto-grow"
               placeholder="As an experienced developer..."
               value={draftPrompt.customPromptPrefix}
               onInput={(event) =>
@@ -469,7 +495,9 @@ const Settings = ({ className }) => {
           <label className="field">
             <span>Closing</span>
             <textarea
+              ref={suffixRef}
               rows={3}
+              className="auto-grow"
               placeholder="I'm available to start immediately."
               value={draftPrompt.customPromptSuffix}
               onInput={(event) =>
@@ -994,6 +1022,14 @@ export default styled(Settings)`
     textarea {
       resize: vertical;
       min-height: 88px;
+    }
+
+    textarea.auto-grow {
+      overflow: hidden;
+      resize: none;
+      transition:
+        height 0.2s ease,
+        border-color 0.2s ease;
     }
   }
 

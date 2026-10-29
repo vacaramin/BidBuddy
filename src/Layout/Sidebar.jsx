@@ -140,7 +140,10 @@ export default styled(Sidebar)`
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    padding: 16px 16px 12px;
+    height: var(--topBarHeight);
+    min-height: var(--topBarHeight);
+    max-height: var(--topBarHeight);
+    padding: 0 16px;
     border-bottom: 1px solid #e6e8ec;
     flex-shrink: 0;
     box-sizing: border-box;
@@ -246,12 +249,16 @@ export default styled(Sidebar)`
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 20px;
+    height: var(--topBarHeight);
+    min-height: var(--topBarHeight);
+    max-height: var(--topBarHeight);
+    padding: 0 20px;
     border-bottom: 1px solid #e6e8ec;
     background: #ffffff;
     position: sticky;
     top: 0;
     z-index: 100;
+    box-sizing: border-box;
   }
 
   .content {
@@ -318,7 +325,7 @@ export default styled(Sidebar)`
     }
 
     .topSection {
-      padding: 12px 16px;
+      padding: 0 16px;
     }
   }
 `;
